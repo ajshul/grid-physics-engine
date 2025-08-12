@@ -26,7 +26,10 @@ export function stepGas(
       const up = i - w;
       // temperature-coupled buoyancy: hotter gas is more eager to rise
       const buoyancyBoost = Math.min(2, Math.max(0, (T[i] - 100) / 100));
-      if (R[up] === 0 || registry[R[up]]?.category === CAT.GAS) {
+      if (
+        (R[up] === 0 || registry[R[up]]?.category === CAT.GAS) &&
+        (W[up] === 0 || registry[W[up]]?.category === CAT.GAS)
+      ) {
         W[i] = 0;
         W[up] = id;
         VY[up] = -1;
@@ -36,13 +39,21 @@ export function stepGas(
       }
       const ul = up - 1;
       const ur = up + 1;
-      if (R[ul] === 0 && rand() < 0.5 + 0.25 * buoyancyBoost) {
+      if (
+        R[ul] === 0 &&
+        (W[ul] === 0 || registry[W[ul]]?.category === CAT.GAS) &&
+        rand() < 0.5 + 0.25 * buoyancyBoost
+      ) {
         W[i] = 0;
         W[ul] = id;
         VX[ul] = -1;
         continue;
       }
-      if (R[ur] === 0 && rand() < 0.5 + 0.25 * buoyancyBoost) {
+      if (
+        R[ur] === 0 &&
+        (W[ur] === 0 || registry[W[ur]]?.category === CAT.GAS) &&
+        rand() < 0.5 + 0.25 * buoyancyBoost
+      ) {
         W[i] = 0;
         W[ur] = id;
         VX[ur] = 1;
@@ -50,7 +61,7 @@ export function stepGas(
       }
       // random jitter diffusion
       const j = rand() < 0.5 ? i - 1 : i + 1;
-      if (R[j] === 0) {
+      if (R[j] === 0 && (W[j] === 0 || registry[W[j]]?.category === CAT.GAS)) {
         W[i] = 0;
         W[j] = id;
         VX[j] = j === i - 1 ? -1 : 1;
@@ -67,6 +78,7 @@ export function stepGas(
       const right = i + 1;
       if (
         R[left] === 0 &&
+        (W[left] === 0 || registry[W[left]]?.category === CAT.GAS) &&
         pHere - (P[left] | 0) > 2 &&
         rand() < 0.1 + 0.05 * buoyancyBoost
       ) {
@@ -75,6 +87,7 @@ export function stepGas(
         VX[left] = -1;
       } else if (
         R[right] === 0 &&
+        (W[right] === 0 || registry[W[right]]?.category === CAT.GAS) &&
         pHere - (P[right] | 0) > 2 &&
         rand() < 0.1 + 0.05 * buoyancyBoost
       ) {

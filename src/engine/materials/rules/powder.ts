@@ -27,7 +27,10 @@ export function stepPowder(
       const belowId = matR[below];
       // empty or gas treated as empty
       const belowMat = registry[belowId];
-      if (belowId === 0 || (belowMat && belowMat.category === CAT.GAS)) {
+      if (
+        (belowId === 0 || (belowMat && belowMat.category === CAT.GAS)) &&
+        (matW[below] === 0 || registry[matW[below]]?.category === CAT.GAS)
+      ) {
         matW[i] = 0;
         matW[below] = id;
         VY[below] = 1;
@@ -42,12 +45,15 @@ export function stepPowder(
         belowMat.category === CAT.LIQUID &&
         (belowMat.density ?? 0) < (m.density ?? 0)
       ) {
-        matW[i] = belowId;
-        matW[below] = id;
-        VY[below] = 1;
-        engine.markDirty(x, y);
-        engine.markDirty(x, y + 1);
-        continue;
+        // respect write occupancy
+        if (matW[below] === 0 || registry[matW[below]]?.category === CAT.GAS) {
+          matW[i] = belowId;
+          matW[below] = id;
+          VY[below] = 1;
+          engine.markDirty(x, y);
+          engine.markDirty(x, y + 1);
+          continue;
+        }
       }
 
       // diagonal slip (reduced when wet)
@@ -71,6 +77,8 @@ export function stepPowder(
         if (
           (matR[tryL] === 0 || registry[matR[tryL]]?.category === CAT.GAS) &&
           (leftId === 0 || registry[leftId]?.category === CAT.GAS) &&
+          (matW[tryL] === 0 || registry[matW[tryL]]?.category === CAT.GAS) &&
+          (matW[i - 1] === 0 || registry[matW[i - 1]]?.category === CAT.GAS) &&
           rand() < slip
         ) {
           matW[i] = 0;
@@ -84,6 +92,8 @@ export function stepPowder(
         if (
           (matR[tryR] === 0 || registry[matR[tryR]]?.category === CAT.GAS) &&
           (rightId === 0 || registry[rightId]?.category === CAT.GAS) &&
+          (matW[tryR] === 0 || registry[matW[tryR]]?.category === CAT.GAS) &&
+          (matW[i + 1] === 0 || registry[matW[i + 1]]?.category === CAT.GAS) &&
           rand() < slip
         ) {
           matW[i] = 0;
@@ -98,6 +108,8 @@ export function stepPowder(
         if (
           (matR[tryR] === 0 || registry[matR[tryR]]?.category === CAT.GAS) &&
           (rightId === 0 || registry[rightId]?.category === CAT.GAS) &&
+          (matW[tryR] === 0 || registry[matW[tryR]]?.category === CAT.GAS) &&
+          (matW[i + 1] === 0 || registry[matW[i + 1]]?.category === CAT.GAS) &&
           rand() < slip
         ) {
           matW[i] = 0;
@@ -111,6 +123,8 @@ export function stepPowder(
         if (
           (matR[tryL] === 0 || registry[matR[tryL]]?.category === CAT.GAS) &&
           (leftId === 0 || registry[leftId]?.category === CAT.GAS) &&
+          (matW[tryL] === 0 || registry[matW[tryL]]?.category === CAT.GAS) &&
+          (matW[i - 1] === 0 || registry[matW[i - 1]]?.category === CAT.GAS) &&
           rand() < slip
         ) {
           matW[i] = 0;

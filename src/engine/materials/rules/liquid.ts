@@ -98,7 +98,10 @@ export function stepLiquid(
           continue;
         }
       }
-      if (R[below] === 0 || registry[R[below]]?.category === CAT.GAS) {
+      if (
+        (R[below] === 0 || registry[R[below]]?.category === CAT.GAS) &&
+        (W[below] === 0 || registry[W[below]]?.category === CAT.GAS)
+      ) {
         W[i] = 0;
         W[below] = id;
         engine.markDirty(x, y);
@@ -111,14 +114,26 @@ export function stepLiquid(
       const leftStack = (P[i - 1] | 0) + (P[dl] | 0);
       const rightStack = (P[i + 1] | 0) + (P[dr] | 0);
       const preferLeft = leftStack < rightStack - 2;
-      if (R[dl] === 0 && R[i - 1] === 0 && (preferLeft || (x & 1) === 0)) {
+      if (
+        R[dl] === 0 &&
+        R[i - 1] === 0 &&
+        (W[dl] === 0 || registry[W[dl]]?.category === CAT.GAS) &&
+        (W[i - 1] === 0 || registry[W[i - 1]]?.category === CAT.GAS) &&
+        (preferLeft || (x & 1) === 0)
+      ) {
         W[i] = 0;
         W[dl] = id;
         engine.markDirty(x, y);
         engine.markDirty(x - 1, y + 1);
         continue;
       }
-      if (R[dr] === 0 && R[i + 1] === 0 && (!preferLeft || (x & 1) === 1)) {
+      if (
+        R[dr] === 0 &&
+        R[i + 1] === 0 &&
+        (W[dr] === 0 || registry[W[dr]]?.category === CAT.GAS) &&
+        (W[i + 1] === 0 || registry[W[i + 1]]?.category === CAT.GAS) &&
+        (!preferLeft || (x & 1) === 1)
+      ) {
         W[i] = 0;
         W[dr] = id;
         engine.markDirty(x, y);
@@ -135,7 +150,8 @@ export function stepLiquid(
         const Ri = i + s;
         if (
           x - s >= 0 &&
-          (R[Li] === 0 || registry[R[Li]]?.category === CAT.GAS)
+          (R[Li] === 0 || registry[R[Li]]?.category === CAT.GAS) &&
+          (W[Li] === 0 || registry[W[Li]]?.category === CAT.GAS)
         ) {
           const drop = pHere - (P[Li] | 0);
           if (drop > bestDrop) {
@@ -145,7 +161,8 @@ export function stepLiquid(
         }
         if (
           x + s < w &&
-          (R[Ri] === 0 || registry[R[Ri]]?.category === CAT.GAS)
+          (R[Ri] === 0 || registry[R[Ri]]?.category === CAT.GAS) &&
+          (W[Ri] === 0 || registry[W[Ri]]?.category === CAT.GAS)
         ) {
           const drop = pHere - (P[Ri] | 0);
           if (drop > bestDrop) {
@@ -156,10 +173,12 @@ export function stepLiquid(
       }
       if (bestDx !== 0) {
         const target = i + bestDx;
-        W[i] = 0;
-        W[target] = id;
-        engine.markDirty(x, y);
-        engine.markDirty(x + bestDx, y);
+        if (W[target] === 0 || registry[W[target]]?.category === CAT.GAS) {
+          W[i] = 0;
+          W[target] = id;
+          engine.markDirty(x, y);
+          engine.markDirty(x + bestDx, y);
+        }
       }
 
       // reactions: water + lava => stone + steam (handled here for immediacy)

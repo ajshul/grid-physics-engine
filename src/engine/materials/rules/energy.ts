@@ -69,7 +69,7 @@ export function stepEnergy(
             if (R[k] === FOAM) halo++;
           }
           const suppression = Math.min(0.5, halo * 0.15);
-          const humidityFactor = 1 - Math.min(0.6, (HUM[j] || 0) / 255 * 0.6);
+          const humidityFactor = 1 - Math.min(0.6, ((HUM[j] || 0) / 255) * 0.6);
           const base = 0.08 * (1 - suppression) * humidityFactor; // baseline ignition chance
           const tempBoost = Math.min(
             0.35,

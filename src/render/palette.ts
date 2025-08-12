@@ -27,5 +27,3 @@ export const MATERIALS = [
 ];
 
 export const COLORS = [0, ...MATERIALS.map((m) => m.color)];
-
-

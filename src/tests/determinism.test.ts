@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Engine } from "../engine/engine";
-import { WATER, LAVA, SAND, FIRE } from "../engine/materials/presets";
+import { WATER, LAVA, SAND } from "../engine/materials/presets";
 
 function hashArray(a: Uint16Array): number {
   let h = 2166136261 >>> 0;
@@ -25,7 +25,8 @@ describe("determinism", () => {
   });
 
   it("deterministic with seeded random for 1000 steps", () => {
-    const W = 48, H = 48;
+    const W = 48,
+      H = 48;
     const A = new Engine({ w: W, h: H, seed: 123 });
     const B = new Engine({ w: W, h: H, seed: 123 });
     // Paint a small scene
@@ -44,5 +45,3 @@ describe("determinism", () => {
     expect(hashArray(matA)).toBe(hashArray(matB));
   });
 });
-
-

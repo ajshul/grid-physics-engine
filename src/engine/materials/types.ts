@@ -47,5 +47,3 @@ export interface Material {
   tick?: (ctx: TickCtx, i: number) => void;
   immiscibleWith?: string[]; // names of liquids considered immiscible for mixing heuristics
 }
-
-

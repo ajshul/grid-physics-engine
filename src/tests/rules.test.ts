@@ -16,7 +16,8 @@ describe("rules", () => {
   });
 
   it("water + lava react to stone + steam", () => {
-    const W = 24, H = 16;
+    const W = 24,
+      H = 16;
     const e = new Engine({ w: W, h: H, seed: 2 });
     e.paint(12, 7, WATER, 0);
     e.paint(12, 8, LAVA, 0);
@@ -25,5 +26,3 @@ describe("rules", () => {
     expect(front.mat[idx(12, 8, W)]).toBe(STONE);
   });
 });
-
-

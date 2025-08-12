@@ -18,7 +18,9 @@ export function blit(
   overlay: OverlayKind = "none"
 ): void {
   const data = new Uint32Array(imageData.data.buffer);
-  const fullRedraw = dirtyChunks.size === 0 || dirtyChunks.size > ((w * h) / (chunkSize * chunkSize)) * 0.6;
+  const fullRedraw =
+    dirtyChunks.size === 0 ||
+    dirtyChunks.size > ((w * h) / (chunkSize * chunkSize)) * 0.6;
   if (fullRedraw) {
     drawRect(0, 0, w, h);
   } else {
@@ -48,7 +50,11 @@ export function blit(
           continue;
         }
         const ov = overlayColor(overlay, temp[i], pressure[i]);
-        data[i] = blendABGR(base, ov, overlayAlpha(overlay, temp[i], pressure[i]));
+        data[i] = blendABGR(
+          base,
+          ov,
+          overlayAlpha(overlay, temp[i], pressure[i])
+        );
       }
     }
   }
@@ -66,7 +72,11 @@ export function makePalette(colors: number[]): Uint32Array {
   return pal;
 }
 
-function overlayColor(kind: OverlayKind, temp: number, pressure: number): number {
+function overlayColor(
+  kind: OverlayKind,
+  temp: number,
+  pressure: number
+): number {
   switch (kind) {
     case "temp": {
       // map 0..600 C to blue→red gradient
@@ -82,7 +92,7 @@ function overlayColor(kind: OverlayKind, temp: number, pressure: number): number
       const p = Math.max(-200, Math.min(200, pressure | 0));
       const t = (p + 200) / 400; // 0..1
       const r = (t * 255) | 0;
-      const g = (((1 - Math.abs(t - 0.5) * 2) * 255) | 0); // white near zero
+      const g = ((1 - Math.abs(t - 0.5) * 2) * 255) | 0; // white near zero
       const b = ((1 - t) * 255) | 0;
       return packABGR(255, r, g, b);
     }
@@ -91,7 +101,11 @@ function overlayColor(kind: OverlayKind, temp: number, pressure: number): number
   }
 }
 
-function overlayAlpha(kind: OverlayKind, temp: number, pressure: number): number {
+function overlayAlpha(
+  kind: OverlayKind,
+  temp: number,
+  pressure: number
+): number {
   switch (kind) {
     case "temp":
       return clamp01((temp - 20) / 200) * 0.55; // emphasize hot areas
@@ -124,5 +138,3 @@ function blendABGR(base: number, overlay: number, alpha: number): number {
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
-
-

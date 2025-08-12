@@ -34,7 +34,17 @@ export default function CanvasView() {
       }
       const front = engine.grid.frontIsA ? engine.grid.a : engine.grid.b;
       const { overlay } = useStore.getState();
-      blit(ctx, id, { mat: front.mat, temp: front.temp, pressure: front.pressure }, pal, W, H, engine.dirty, engine.chunkSize, overlay);
+      blit(
+        ctx,
+        id,
+        { mat: front.mat, temp: front.temp, pressure: front.pressure },
+        pal,
+        W,
+        H,
+        engine.dirty,
+        engine.chunkSize,
+        overlay
+      );
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -46,6 +56,23 @@ export default function CanvasView() {
       const { selected, brush } = useStore.getState();
       engine.paint(x, y, selected, brush);
     };
+    const onMove = (e: PointerEvent) => {
+      const rect = cvs.getBoundingClientRect();
+      const x = Math.floor(((e.clientX - rect.left) / rect.width) * W);
+      const y = Math.floor(((e.clientY - rect.top) / rect.height) * H);
+      const front = engine.grid.frontIsA ? engine.grid.a : engine.grid.b;
+      const i = y * W + x;
+      useStore.setState({
+        hovered: {
+          x,
+          y,
+          mat: front.mat[i],
+          temp: front.temp[i],
+          pressure: front.pressure[i],
+          humidity: front.humidity[i],
+        },
+      });
+    };
     const down = (e: PointerEvent) => {
       onDrag(e);
       cvs.setPointerCapture(e.pointerId);
@@ -54,11 +81,13 @@ export default function CanvasView() {
     const up = () => cvs.removeEventListener("pointermove", onDrag);
 
     cvs.addEventListener("pointerdown", down);
+    cvs.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", up);
 
     return () => {
       window.removeEventListener("pointerup", up);
       cvs.removeEventListener("pointerdown", down);
+      cvs.removeEventListener("pointermove", onMove);
       cvs.removeEventListener("pointermove", onDrag);
       cancelAnimationFrame(raf);
     };

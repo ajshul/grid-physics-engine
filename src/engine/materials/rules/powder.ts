@@ -13,8 +13,10 @@ export function stepPowder(
   const matR = read.mat;
   const matW = write.mat;
   const humidity = write.humidity;
+  const VX = write.velX;
+  const VY = write.velY;
   for (let y = h - 2; y >= 0; y--) {
-    const dir = rand() < 0.5 ? -1 : 1; // alternate to reduce bias
+    const dir = (y & 1) === 0 ? -1 : 1; // alternate to reduce bias per row
     for (let x = dir < 0 ? w - 2 : 1; dir < 0 ? x >= 1 : x <= w - 2; x += dir) {
       const i = (y * w + x) | 0;
       const id = matR[i];
@@ -28,6 +30,7 @@ export function stepPowder(
       if (belowId === 0 || (belowMat && belowMat.category === CAT.GAS)) {
         matW[i] = 0;
         matW[below] = id;
+        VY[below] = 1;
         engine.markDirty(x, y);
         engine.markDirty(x, y + 1);
         continue;
@@ -41,6 +44,7 @@ export function stepPowder(
       ) {
         matW[i] = belowId;
         matW[below] = id;
+        VY[below] = 1;
         engine.markDirty(x, y);
         engine.markDirty(x, y + 1);
         continue;
@@ -49,7 +53,16 @@ export function stepPowder(
       // diagonal slip (reduced when wet)
       const localWet = humidity[i] / 255;
       const slipBase = m.slip ?? 0.7;
-      const slip = Math.max(0, slipBase - 0.4 * localWet);
+      // wind coupling: gas velocity near powder nudges lateral move chance
+      let windBoost = 0;
+      const leftGas = registry[matR[i - 1]]?.category === CAT.GAS;
+      const rightGas = registry[matR[i + 1]]?.category === CAT.GAS;
+      if (leftGas && VX[i - 1] < 0) windBoost += 0.1;
+      if (rightGas && VX[i + 1] > 0) windBoost += 0.1;
+      const slip = Math.max(
+        0,
+        Math.min(1, slipBase - 0.4 * localWet + windBoost)
+      );
       const tryL = below - 1;
       const tryR = below + 1;
       // randomized side preference
@@ -62,6 +75,7 @@ export function stepPowder(
         ) {
           matW[i] = 0;
           matW[tryL] = id;
+          VX[tryL] = -1;
           engine.markDirty(x, y);
           engine.markDirty(x - 1, y + 1);
           continue;
@@ -74,6 +88,7 @@ export function stepPowder(
         ) {
           matW[i] = 0;
           matW[tryR] = id;
+          VX[tryR] = 1;
           engine.markDirty(x, y);
           engine.markDirty(x + 1, y + 1);
           continue;
@@ -87,6 +102,7 @@ export function stepPowder(
         ) {
           matW[i] = 0;
           matW[tryR] = id;
+          VX[tryR] = 1;
           engine.markDirty(x, y);
           engine.markDirty(x + 1, y + 1);
           continue;
@@ -99,6 +115,7 @@ export function stepPowder(
         ) {
           matW[i] = 0;
           matW[tryL] = id;
+          VX[tryL] = -1;
           engine.markDirty(x, y);
           engine.markDirty(x - 1, y + 1);
           continue;

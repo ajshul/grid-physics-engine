@@ -1,7 +1,19 @@
 import type { Engine } from "../engine";
 import type { GridView } from "../grid";
 import { registry } from "./index";
-import { FIRE, ICE, STEAM, WATER, OIL, LAVA, RUBBER, GLASS, MUD, EMBER, SAND } from "./presets";
+import {
+  FIRE,
+  ICE,
+  STEAM,
+  WATER,
+  OIL,
+  LAVA,
+  RUBBER,
+  GLASS,
+  MUD,
+  EMBER,
+  SAND,
+} from "./presets";
 
 export function applyThermal(engine: Engine, write: GridView) {
   const { w, h } = engine.grid;
@@ -92,7 +104,16 @@ export function applyThermal(engine: Engine, write: GridView) {
           const neighbors = [i - 1, i + 1, i - w, i + w];
           for (const j of neighbors) {
             if (M[j] === 0) {
-              M[j] = T[i] > 80 ? STEAM : (Object.keys(registry).find((k) => registry[+k]?.name === "Smoke") ? (Object.keys(registry).find((k) => registry[+k]?.name === "Smoke") as unknown as number) : 0);
+              M[j] =
+                T[i] > 80
+                  ? STEAM
+                  : Object.keys(registry).find(
+                      (k) => registry[+k]?.name === "Smoke"
+                    )
+                  ? (Object.keys(registry).find(
+                      (k) => registry[+k]?.name === "Smoke"
+                    ) as unknown as number)
+                  : 0;
               break;
             }
           }
@@ -118,7 +139,9 @@ export function applyThermal(engine: Engine, write: GridView) {
 
       // Mud dries back to Sand when not near water and humidity low
       if (id === MUD) {
-        const nearWater = [i - 1, i + 1, i - w, i + w].some((j) => M[j] === WATER);
+        const nearWater = [i - 1, i + 1, i - w, i + w].some(
+          (j) => M[j] === WATER
+        );
         if (!nearWater && HUM[i] < 40 && engine.rand && engine.rand() < 0.02) {
           M[i] = SAND;
         }

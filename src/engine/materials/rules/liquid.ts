@@ -15,6 +15,7 @@ export function stepLiquid(
   const W = write.mat;
   const P = write.pressure;
   const T = write.temp;
+  const HUM = write.humidity;
   for (let y = h - 2; y >= 0; y--) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -192,6 +193,13 @@ export function stepLiquid(
         engine.markDirty(x, y);
         engine.markDirty(x, y + 1);
         continue;
+      }
+
+      // humidity coupling: water/foam/acid wet neighboring cells
+      if (id === WATER || m.name === "Foam" || m.name === "Acid") {
+        const add = id === WATER ? 12 : m.name === "Foam" ? 8 : 10;
+        const n = [i, i - 1, i + 1, i - w, i + w];
+        for (const j of n) HUM[j] = Math.min(255, (HUM[j] | 0) + add) as any;
       }
     }
   }

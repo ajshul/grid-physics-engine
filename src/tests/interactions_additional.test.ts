@@ -9,6 +9,11 @@ import {
   STEAM,
   ICE,
   STONE,
+  WOOD,
+  OIL,
+  FIRE,
+  SMOKE,
+  EMBER,
 } from "../engine/materials/presets";
 
 function F(e: Engine) {
@@ -72,5 +77,59 @@ describe("additional interactions", () => {
     // ensure at least one water cell exists anywhere (no initial water present)
     const foundWater = Array.from(gv.mat).some((v) => v === WATER);
     expect(foundWater).toBe(true);
+  });
+
+  it("lava near wood and oil reliably ignites them", () => {
+    const W = 36,
+      H = 24;
+    const e = new Engine({ w: W, h: H, seed: 2024 });
+    const x = 18,
+      y = 12;
+    e.paint(x, y, LAVA, 0);
+    e.paint(x + 1, y, WOOD, 0);
+    e.paint(x - 1, y, OIL, 0);
+    let nearWoodIgnited = false;
+    let nearOilIgnited = false;
+    for (let t = 0; t < 90; t++) {
+      e.step();
+      const g = F(e);
+      const neighWood = [
+        idx(x + 1, y, W),
+        idx(x + 2, y, W),
+        idx(x + 1, y - 1, W),
+        idx(x + 1, y + 1, W),
+      ];
+      const neighOil = [
+        idx(x - 1, y, W),
+        idx(x - 2, y, W),
+        idx(x - 1, y - 1, W),
+        idx(x - 1, y + 1, W),
+      ];
+      if (neighWood.some((i) => [FIRE, SMOKE, EMBER].includes(g.mat[i])))
+        nearWoodIgnited = true;
+      if (neighOil.some((i) => [FIRE, SMOKE, EMBER].includes(g.mat[i])))
+        nearOilIgnited = true;
+      if (nearWoodIgnited && nearOilIgnited) break;
+    }
+    expect(nearWoodIgnited).toBe(true);
+    expect(nearOilIgnited).toBe(true);
+  });
+
+  it("burning oil tends to smoke out; burning wood tends to leave ember", () => {
+    const W = 40,
+      H = 28;
+    const e = new Engine({ w: W, h: H, seed: 3003 });
+    const xo = 12,
+      yo = 14;
+    const xw = 26,
+      yw = 14;
+    e.paint(xo, yo, OIL, 0);
+    e.paint(xw, yw, WOOD, 0);
+    e.paint(xo + 1, yo, FIRE, 0);
+    e.paint(xw - 1, yw, FIRE, 0);
+    for (let t = 0; t < 260; t++) e.step();
+    const g = F(e);
+    expect([SMOKE, FIRE, OIL, 0]).toContain(g.mat[idx(xo, yo, W)]);
+    expect([EMBER, FIRE, WOOD, 0]).toContain(g.mat[idx(xw, yw, W)]);
   });
 });

@@ -2,7 +2,7 @@ import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { CAT } from "../categories";
-import { LAVA, STEAM, WATER, STONE } from "../presets";
+import { LAVA, STEAM, WATER, STONE, FIRE } from "../presets";
 
 export function stepLiquid(
   engine: Engine,
@@ -17,12 +17,34 @@ export function stepLiquid(
   const I = write.impulse;
   const T = write.temp;
   const HUM = write.humidity;
+  const canWrite = (idx: number): boolean => W[idx] === R[idx];
+  const VX = write.velX;
   for (let y = h - 2; y >= 0; y--) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
       const id = R[i];
       const m = registry[id];
       if (!m || m.category !== "liquid") continue;
+
+      // Lava strongly preheats adjacent cells before movement to better model radiative/contact heating
+      if (m.name === "Lava") {
+        const neigh = [i - 1, i + 1, i - w, i + w];
+        for (const j of neigh) {
+          // raise neighbor temperature toward a hot target to ensure ignition without instant stone coating
+          const target = Math.min(450, (T[i] | 0) - 200);
+          if (target > (T[j] | 0)) T[j] = target;
+          // direct contact ignition for flammables (oil, wood) — immediate and deterministic
+          const mid = R[j];
+          const mn = registry[mid];
+          if (mn?.flammable) {
+            // Reaction precedence: force ignition even if prior writes attempted movement
+            W[j] = FIRE; // rely on energy pass to evolve; tag origin in VX
+            VX[j] = (mn.name === "Oil" ? 1 : mn.name === "Wood" ? 2 : 0) as any;
+            T[j] = Math.max(T[j], 320);
+            engine.markDirty(j % w, (j / w) | 0);
+          }
+        }
+      }
 
       const below = i + w;
       const above = i - w;
@@ -32,6 +54,7 @@ export function stepLiquid(
       // remove any artificial holds; liquids should move according to rules
 
       // immediate reaction: water + lava -> stone + steam (pre-move)
+      // Do NOT react with solids like wood/oil here; handled by thermal/energy passes
       if (
         (id === WATER && R[below] === LAVA) ||
         (id === LAVA && R[below] === WATER)
@@ -47,6 +70,7 @@ export function stepLiquid(
           T[below] = Math.max(T[below], 200);
           // do not continue; allow normal movement below
         } else {
+          // Reaction takes precedence over previous writes; enforce conversion
           W[below] = STONE;
           W[i] = STEAM;
           // heat burst
@@ -94,7 +118,11 @@ export function stepLiquid(
           (m.immiscibleWith && m.immiscibleWith.includes(belowMat.name)) ||
           (belowMat.immiscibleWith && belowMat.immiscibleWith.includes(m.name));
         const densDelta = (m.density ?? 0) - (belowMat.density ?? 0);
-        if (!imm || densDelta > 1.5 || rand() < 0.2) {
+        if (
+          (!imm || densDelta > 1.5 || rand() < 0.2) &&
+          canWrite(i) &&
+          canWrite(below)
+        ) {
           W[i] = R[below];
           W[below] = id;
           engine.markDirty(x, y);
@@ -112,7 +140,11 @@ export function stepLiquid(
           (m.immiscibleWith && m.immiscibleWith.includes(aboveMat.name)) ||
           (aboveMat.immiscibleWith && aboveMat.immiscibleWith.includes(m.name));
         const densDelta = (aboveMat.density ?? 0) - (m.density ?? 0);
-        if (!imm || densDelta > 1.5 || rand() < 0.2) {
+        if (
+          (!imm || densDelta > 1.5 || rand() < 0.2) &&
+          canWrite(i) &&
+          canWrite(above)
+        ) {
           W[i] = R[above];
           W[above] = id;
           engine.markDirty(x, y);
@@ -122,7 +154,9 @@ export function stepLiquid(
       }
       if (
         (R[below] === 0 || registry[R[below]]?.category === CAT.GAS) &&
-        (W[below] === 0 || registry[W[below]]?.category === CAT.GAS)
+        (W[below] === 0 || registry[W[below]]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(below)
       ) {
         W[i] = 0;
         W[below] = id;
@@ -141,7 +175,9 @@ export function stepLiquid(
         R[i - 1] === 0 &&
         (W[dl] === 0 || registry[W[dl]]?.category === CAT.GAS) &&
         (W[i - 1] === 0 || registry[W[i - 1]]?.category === CAT.GAS) &&
-        (preferLeft || (x & 1) === 0)
+        (preferLeft || (x & 1) === 0) &&
+        canWrite(i) &&
+        canWrite(dl)
       ) {
         W[i] = 0;
         W[dl] = id;
@@ -154,7 +190,9 @@ export function stepLiquid(
         R[i + 1] === 0 &&
         (W[dr] === 0 || registry[W[dr]]?.category === CAT.GAS) &&
         (W[i + 1] === 0 || registry[W[i + 1]]?.category === CAT.GAS) &&
-        (!preferLeft || (x & 1) === 1)
+        (!preferLeft || (x & 1) === 1) &&
+        canWrite(i) &&
+        canWrite(dr)
       ) {
         W[i] = 0;
         W[dr] = id;
@@ -193,7 +231,7 @@ export function stepLiquid(
           }
         }
       }
-      if (bestDx !== 0) {
+      if (bestDx !== 0 && canWrite(i) && canWrite(i + bestDx)) {
         const target = i + bestDx;
         if (W[target] === 0 || registry[W[target]]?.category === CAT.GAS) {
           W[i] = 0;

@@ -11,3 +11,11 @@ export const STATIC_PRESSURE_DECAY_PER_STEP = 0.95; // decays each 60Hz step
 export const IMPULSE_DECAY_PER_STEP = 0.8; // faster decay for impulse
 export const PRESSURE_DIFFUSION_ALPHA = 0.05; // blending weight for smoothing
 export const IMPULSE_BLEND_FACTOR = 0.6; // fraction of impulse added to static
+
+// Lava solidification (tunable)
+// Temperature at/below which lava begins to solidify (°C)
+export const LAVA_SOLIDIFY_TEMP_C = 180;
+// Latent-like energy budget required (arbitrary energy units) before turning to Stone
+export const LAVA_SOLIDIFY_ENERGY = 6000;
+// Per-second cooling scale for lava toward ambient (smaller = slower cooling)
+export const LAVA_COOLING_PER_SEC = 0.15;

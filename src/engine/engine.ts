@@ -1,15 +1,7 @@
 import { createGrid, front, back, swap } from "./grid";
-import { stepPowder } from "./materials/rules/powder";
-import { stepLiquid } from "./materials/rules/liquid";
-import { stepGas } from "./materials/rules/gas";
-import { stepSolid } from "./materials/rules/solid";
-import { stepEnergy } from "./materials/rules/energy";
-import { stepObjects } from "./materials/rules/object";
-import { applyThermal } from "./materials/reactions";
 import { mulberry32 } from "./rng";
-import { computePressure } from "./passes/pressure";
-import { applyAcidEtching } from "./passes/acid";
 import { registry } from "./materials";
+import { createDefaultPipeline, PassPipeline } from "./pipeline";
 
 export interface EngineOptions {
   w: number;
@@ -27,12 +19,14 @@ export class Engine {
   chunkSize = 64;
   // Fixed simulation time step in seconds
   dt = 1 / 60;
+  private pipeline: PassPipeline;
 
   constructor(opts: EngineOptions) {
     this.opts = opts;
     this.grid = createGrid(this.opts.w, this.opts.h);
     this.rand = mulberry32(this.opts.seed ?? 1337);
     this.dt = typeof opts.dt === "number" && opts.dt > 0 ? opts.dt : 1 / 60;
+    this.pipeline = createDefaultPipeline();
   }
 
   paint(x: number, y: number, materialId: number, radius = 3): void {
@@ -105,17 +99,8 @@ export class Engine {
     gB.humidity.set(gA.humidity);
     gB.phase.set(gA.phase);
 
-    // compute pressure field for liquids/gases with decay
-    computePressure(this, gA, gB);
-
-    stepPowder(this, gA, gB, r);
-    stepLiquid(this, gA, gB, r);
-    stepGas(this, gA, gB, r);
-    stepSolid(this, gA, gB, r);
-    stepEnergy(this, gA, gB, r);
-    stepObjects(this, gA, gB, r);
-    applyAcidEtching(this, gA, gB);
-    applyThermal(this, gB);
+    // Run modular pass pipeline
+    this.pipeline.run(this, gA, gB, r);
 
     swap(this.grid);
   }

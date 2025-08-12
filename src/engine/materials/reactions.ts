@@ -19,6 +19,9 @@ import {
   CONDUCTION_SCALE_PER_SEC,
   LATENT_FUSION_ENERGY,
   MAX_LATENT_STEP_AT_60HZ,
+  LAVA_COOLING_PER_SEC,
+  LAVA_SOLIDIFY_ENERGY,
+  LAVA_SOLIDIFY_TEMP_C,
 } from "../constants";
 import { getMaterialIdByName } from "../utils";
 
@@ -30,6 +33,7 @@ export function applyThermal(engine: Engine, write: GridView) {
   const P = write.pressure;
   const PH = write.phase; // latent heat accumulator (fusion)
   const AUX = write.aux; // used for slow boiling
+  const VX = write.velX; // reused to tag fire origin (0=unknown,1=oil,2=wood)
 
   // constants (tunable)
   const AMBIENT = AMBIENT_TEMPERATURE_C;
@@ -135,6 +139,22 @@ export function applyThermal(engine: Engine, write: GridView) {
 
       // --- Ambient + radiative cooling for all cells (additive) ---
       const n = [i - 1, i + 1, i - w, i + w];
+      // Preheat from nearby lava to promote ignition before combustion check
+      // This runs before ambient cooling and combustion to ensure timely ignition
+      {
+        let nearLava = false;
+        for (const j of n) if (M[j] === LAVA) nearLava = true;
+        if (nearLava) {
+          const baseBoost = 80; // base radiant boost
+          const tempHere = T[i];
+          // apply a capped increase to simulate intense local heating
+          const add = Math.min(
+            120,
+            Math.max(0, baseBoost + (AMBIENT - tempHere) * -0.05)
+          );
+          if (add > 0) T[i] += add;
+        }
+      }
       const category = m?.category;
       const cpDefault = getHeatCapacity(id);
       const density = getDensity(id);
@@ -248,32 +268,79 @@ export function applyThermal(engine: Engine, write: GridView) {
       }
 
       // --- Combustion/ignition ---
-      if (m?.flammable && T[i] >= (m.combustionTemp ?? 300)) {
-        M[i] = FIRE;
+      if (m?.flammable) {
+        // temperature-gated ignition
+        if (T[i] >= (m.combustionTemp ?? 300)) {
+          M[i] = FIRE;
+          VX[i] =
+            m.name === "Oil"
+              ? (1 as any)
+              : m.name === "Wood"
+              ? (2 as any)
+              : (0 as any);
+        }
+        // deterministic near-lava contact ignition budget (accumulates over frames)
+        const neigh = [i - 1, i + 1, i - w, i + w];
+        let nearLava = false;
+        for (const j of neigh) if (M[j] === LAVA) nearLava = true;
+        const add = nearLava ? Math.max(1, (12 * dt * 60) | 0) : -1;
+        const budget = Math.max(0, (AUX[i] | 0) + add);
+        AUX[i] = Math.min(65535, budget) as any;
+        if (budget >= 24) {
+          M[i] = FIRE;
+          VX[i] =
+            m.name === "Oil"
+              ? (1 as any)
+              : m.name === "Wood"
+              ? (2 as any)
+              : (0 as any);
+          AUX[i] = 0 as any;
+        }
       }
       if (id === OIL && T[i] >= 250) {
         M[i] = FIRE;
+        VX[i] = 1 as any;
       }
+      // (Ignition easing handled above with deterministic budget + temperature gating)
+      // Lava promotes ignition nearby via strong heating; direct contact already heated above may switch earlier
 
       // (Fire lifetime handled in energy pass deterministically)
 
       // --- Lava behavior: hot, slowly cools to stone without external input ---
       if (id === LAVA) {
-        // ensure lava remains quite hot initially, but cools gradually via ambient
+        // cool toward ambient at a gentle rate (configurable), mass-aware
         const cp = getHeatCapacity(LAVA);
         const massLava = Math.max(0.2, cp * getDensity(LAVA));
-        const coolPerSec = 0.3; // slower cooling than water/air
-        const dT = ((AMBIENT - T[i]) * (coolPerSec * dt)) / massLava;
+        const dT = ((AMBIENT - T[i]) * (LAVA_COOLING_PER_SEC * dt)) / massLava;
         T[i] += dT;
-        if (T[i] < 220) {
+        // radiant/conductive heating of immediate neighbors to promote ignition of flammables
+        const neigh = [i - 1, i + 1, i - w, i + w];
+        for (const j of neigh) {
+          // boost neighbor temperature based on lava heat, capped
+          const targetBoost = Math.max(0, Math.min(120, (T[i] - T[j]) * 0.3));
+          T[j] += targetBoost;
+        }
+        // accumulate a latent-like budget while lava is below a threshold
+        if (T[i] <= LAVA_SOLIDIFY_TEMP_C) {
+          const deficit = LAVA_SOLIDIFY_TEMP_C - T[i];
+          const add = Math.max(1, (deficit * cp * (dt * 30)) | 0);
+          AUX[i] = Math.min(65535, (AUX[i] | 0) + add) as any;
+        }
+        if ((AUX[i] | 0) >= LAVA_SOLIDIFY_ENERGY) {
           const stoneId = getMaterialIdByName("Stone");
-          if (stoneId) M[i] = stoneId;
+          if (stoneId) {
+            M[i] = stoneId;
+            // carry a bit of residual heat into stone to avoid instant re-melt visuals
+            T[i] = Math.max(T[i], AMBIENT_TEMPERATURE_C + 20);
+            AUX[i] = 0 as any;
+          }
         }
       }
 
       // --- Ice neighborhood cooling ---
       if (id === ICE) {
-        for (const j of n) T[j] = Math.max(-100, T[j] - 1.5);
+        // gentle local cooling; clamp to avoid driving neighbors extremely cold
+        for (const j of n) T[j] = Math.max(-40, T[j] - 0.8);
       }
 
       // --- Rubber pops to smoke ---

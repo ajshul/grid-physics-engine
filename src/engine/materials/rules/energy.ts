@@ -1,7 +1,7 @@
 import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
-import { FIRE, FOAM, SMOKE, STEAM, WATER, OIL, EMBER } from "../presets";
+import { FIRE, FOAM, SMOKE, STEAM, WATER, OIL, EMBER, WOOD } from "../presets";
 import { getMaterialIdByName } from "../../utils";
 
 export function stepEnergy(
@@ -17,6 +17,8 @@ export function stepEnergy(
   const AUX = write.aux;
   const HUM = write.humidity;
   const IMP = write.impulse;
+  const VX = write.velX;
+  const canWrite = (idx: number): boolean => W[idx] === R[idx];
 
   // const ASH = getMaterialIdByName("Ash"); // reserved for future use in burnout/ash logic
   const DUST = getMaterialIdByName("Dust");
@@ -36,14 +38,14 @@ export function stepEnergy(
       let extinguished = false;
       for (const j of n) {
         const nid = R[j];
-        if (nid === WATER) {
+        if (nid === WATER && canWrite(i)) {
           // produce steam and extinguish
           W[i] = STEAM;
           T[j] = Math.max(T[j], 100);
           extinguished = true;
           break;
         }
-        if (nid === FOAM) {
+        if (nid === FOAM && canWrite(i)) {
           // Deterministic suppression if any foam neighbor and temperature not extreme
           if (T[i] < 800) {
             W[i] = FOAM; // smothered into foam mass (stable)
@@ -77,7 +79,7 @@ export function stepEnergy(
           const humidityFactor = 1 - Math.min(0.6, ((HUM[j] || 0) / 255) * 0.6);
           // Deterministic ignition when far above threshold; probabilistic near threshold
           const threshold = mat.combustionTemp ?? 300;
-          if (T[j] >= threshold + 40) {
+          if (T[j] >= threshold + 40 && canWrite(j)) {
             W[j] = FIRE;
             continue;
           }
@@ -94,22 +96,39 @@ export function stepEnergy(
             ).length;
             chance += Math.min(0.2, oilNeighbors * 0.06);
           }
-          if (rand() < chance) {
+          if (rand() < chance && canWrite(j)) {
+            // mark origin fuel type in VX for burnout byproducts
+            const origin = mid === OIL ? 1 : mid === WOOD ? 2 : 0;
             W[j] = FIRE;
+            VX[j] = origin as any;
           }
         }
       }
 
-      // Lifetime and burnout → smoke/ember (deterministic duration)
+      // Lifetime and burnout → smoke/ember (fuel-aware deterministic duration)
       let life = AUX[i];
-      if (!life) life = (25 * Math.max(1, Math.round(engine.dt * 60))) as any;
+      // Longer for wood, shorter for oil
+      if (!life) {
+        const origin = VX[i] | 0;
+        const base = origin === 2 ? 45 : origin === 1 ? 18 : 25; // frames at 60Hz
+        life = (base * Math.max(1, Math.round(engine.dt * 60))) as any;
+      }
       life--;
       AUX[i] = life as any;
-      if (life <= 0) {
-        // on burnout convert to ember (which cools and eventually ashes)
-        W[i] = EMBER;
-        // drop local temperature to avoid immediate re-ignition loops
-        T[i] = Math.min(T[i], 260);
+      if (life <= 0 && canWrite(i)) {
+        // Fuel-aware burnout using stored origin code in VX
+        const origin = VX[i] | 0;
+        if (origin === 1) {
+          W[i] = SMOKE;
+          T[i] = Math.max(80, Math.min(T[i], 220));
+        } else if (origin === 2) {
+          W[i] = EMBER;
+          T[i] = Math.min(T[i], 260);
+        } else {
+          // default: ember
+          W[i] = EMBER;
+          T[i] = Math.min(T[i], 260);
+        }
       }
       // If surrounded by cold non-flammable materials, shorten lifetime slightly
       const neigh = [i - 1, i + 1, i - w, i + w];

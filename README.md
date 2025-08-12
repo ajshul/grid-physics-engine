@@ -7,6 +7,8 @@ A modern, deterministic, and extensible 2D grid-based physics sandbox built with
 - Category rules for powders, liquids, gases, energy (fire), and objects
 - Thermal conduction + phase changes + reactions (antisymmetric, mass-aware conduction; latent heat; vitrification)
 - Pressure field for liquid/gas guidance: persistent static field with decay/diffusion plus a separate transient impulse buffer (blended)
+ - Modular pass pipeline and write-guards to avoid cross-pass clobbering
+ - Fuel‑aware fire lifecycle (oil → smoke, wood → ember), lava reliably ignites flammables before cooling to stone
 
 This README summarizes how to run the project, the architecture, materials and interactions, and how to extend it. For a deep-dive, see `./Engine_Guide.md`.
 
@@ -32,6 +34,7 @@ Planned (see TODO.md): additional tools (line/rect/fill/eyedropper/fan/heater/co
 src/
   engine/
     engine.ts           # main step loop (double buffer, seeded RNG)
+    pipeline.ts         # modular pass pipeline (pressure → powder → liquid → gas → energy → objects → chemistry → thermal)
     grid.ts             # SoA buffers and helpers
       constants.ts        # core tunables (ambient, conduction, latent heat, pressure)
       utils.ts            # helpers (name lookup, neighbors, clamps)
@@ -66,10 +69,10 @@ src/
 ## Engine Overview
 
 - Double buffer step: read Front, write Back, then swap
-- Update order per frame: Pressure → Powder → Liquid → Gas → Energy → Objects → Chemistry → Thermal/Reactions
+- Update order per frame (via PassPipeline): Pressure → Powder → Liquid → Gas → Energy → Objects → Chemistry → Thermal/Reactions
 - Pressure: static and impulse components; bottom-up accumulation for liquids, gradient for gases; blended for flow/venting
 - Thermal: antisymmetric, mass-aware conduction; additive ambient cooling; latent heat (ice↔water); boiling delayed under pressure; steam rises then condenses
-- Reactions: water+lava→stone+steam (heat-gated); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets
+- Reactions: water+lava→stone+steam (brief heat gating, then precedence); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets; lava preheats/ignites nearby oil/wood before it cools to stone
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
 
 Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressure decay/diffusion, impulse blend) live in `src/engine/constants.ts`.
@@ -85,12 +88,13 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
 
 ## Interactions (Selected)
 
-- Water + Lava → Stone + Steam (heats area)
+- Water + Lava → Stone + Steam (heats area; conversion may occur after brief heating and has precedence once hot)
 - Sand + Lava → Glass (high heat conversion; see guide)
-- Oil near Fire ignites readily and propagates fire
+- Oil near Fire ignites readily and propagates fire; lava in contact with oil/wood ignites them
 - Foam deterministically suppresses Fire and may decay into Water
 - Acid dissolves Stone/Wood/Glass into Rubble and emits heat + some Smoke
 - Rubber pops into Smoke at high temperature
+- Fuel‑aware fire burnout: burning oil tends to become Smoke; burning wood tends to become Ember (and can later ash)
 - Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C
 
 For a detailed first-principles specification, see `./Engine_Guide.md`.
@@ -100,12 +104,14 @@ For a detailed first-principles specification, see `./Engine_Guide.md`.
 - Seeded RNG via `mulberry32`; probabilistic behavior is scoped and minimized; budgets/thresholds preferred for test-critical behavior
 - SoA arrays minimize allocation and favor fast copies
 - Pressure-guided liquid/gas movement improves realism without heavy solvers; liquids have slope bias; gases rise faster when hot; steam has vertical preference with age/condense rules
+- Write-guards in passes avoid cross-pass clobbering; explicit reaction precedence is used for physically-driven conversions
 - Build is optimized via Vite; consider moving simulation into a Web Worker (see TODO)
 
 ## Testing
 
 - Determinism test: identical state hashes given seed after N steps
 - Rules tests: powder fall, basic flows, gas rise
+- Interaction tests: foam suppression; lava ignites wood/oil before cooling; water+lava reaction observed in a neighborhood
 
 Run: `npm run test`
 

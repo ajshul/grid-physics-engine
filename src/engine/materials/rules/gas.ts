@@ -18,6 +18,7 @@ export function stepGas(
   const VY = write.velY;
   const I = write.impulse;
   const AUX = write.aux;
+  const canWrite = (idx: number): boolean => W[idx] === R[idx];
   for (let y = 1; y < h - 1; y++) {
     const dir = (y & 1) === 0 ? 1 : -1;
     for (let x = dir > 0 ? 1 : w - 2; dir > 0 ? x < w - 1 : x > 0; x += dir) {
@@ -34,7 +35,9 @@ export function stepGas(
       if (
         (W[i] === 0 || registry[W[i]]?.category === CAT.GAS) &&
         registry[R[up]]?.category === CAT.LIQUID &&
-        (W[up] === R[up] || W[up] === 0)
+        (W[up] === R[up] || W[up] === 0) &&
+        canWrite(i) &&
+        canWrite(up)
       ) {
         const hotBoost = Math.min(0.5, Math.max(0, (T[i] - 100) / 150));
         if (rand() < 0.25 + 0.12 * buoyancyBoost + hotBoost) {
@@ -50,7 +53,9 @@ export function stepGas(
 
       if (
         (R[up] === 0 || registry[R[up]]?.category === CAT.GAS) &&
-        (W[up] === 0 || registry[W[up]]?.category === CAT.GAS)
+        (W[up] === 0 || registry[W[up]]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(up)
       ) {
         const isSteam = m.name === "Steam";
         if (isSteam) {
@@ -77,6 +82,8 @@ export function stepGas(
         m.name !== "Steam" &&
         R[ul] === 0 &&
         (W[ul] === 0 || registry[W[ul]]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(ul) &&
         rand() < 0.5 + 0.2 * buoyancyBoost
       ) {
         W[i] = 0;
@@ -88,6 +95,8 @@ export function stepGas(
         m.name !== "Steam" &&
         R[ur] === 0 &&
         (W[ur] === 0 || registry[W[ur]]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(ur) &&
         rand() < 0.5 + 0.2 * buoyancyBoost
       ) {
         W[i] = 0;
@@ -102,7 +111,9 @@ export function stepGas(
       if (
         allowLateral &&
         R[j] === 0 &&
-        (W[j] === 0 || registry[W[j]]?.category === CAT.GAS)
+        (W[j] === 0 || registry[W[j]]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(j)
       ) {
         W[i] = 0;
         W[j] = id;
@@ -129,6 +140,8 @@ export function stepGas(
         R[left] === 0 &&
         (W[left] === 0 || registry[W[left]]?.category === CAT.GAS) &&
         pHere - (((P[left] | 0) + (I[left] | 0)) | 0) > 2 &&
+        canWrite(i) &&
+        canWrite(left) &&
         rand() < 0.1 + 0.05 * buoyancyBoost
       ) {
         W[i] = 0;
@@ -139,6 +152,8 @@ export function stepGas(
         R[right] === 0 &&
         (W[right] === 0 || registry[W[right]]?.category === CAT.GAS) &&
         pHere - (((P[right] | 0) + (I[right] | 0)) | 0) > 2 &&
+        canWrite(i) &&
+        canWrite(right) &&
         rand() < 0.1 + 0.05 * buoyancyBoost
       ) {
         W[i] = 0;

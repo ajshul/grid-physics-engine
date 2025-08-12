@@ -53,7 +53,7 @@ Double buffering (`a` and `b`) ensures “read front, write back, then swap” e
 9. Thermal/Phase/Reactions (`materials/reactions.ts`)
 10. Swap buffers
 
-The order avoids write conflicts between categories and reflects typical physical causality (pressure → motion → reactions → thermal).
+Implemented via `PassPipeline` (`engine/pipeline.ts`). Each pass writes to the back buffer and uses write-guards to minimize cross-pass clobbering. The order avoids write conflicts and reflects physical causality (pressure → motion → reactions → thermal).
 
 ---
 
@@ -109,7 +109,7 @@ Pairwise exchange with right/down neighbors per step to avoid double counting:
 
 ### Other Thermal Behaviors
 
-- Lava cools slowly towards ambient and eventually solidifies to Stone (no external cooling required)
+- Lava cools slowly towards ambient and eventually solidifies to Stone (no external cooling required). Lava preheats neighbors strongly; direct contact with flammables (Oil/Wood) deterministically ignites them before cooling/solidifying.
 - Ice mildly cools its 4‑neighbors
 - Rubber pops to Smoke when hot
 - Wood can char (stochastically) before combustion
@@ -155,7 +155,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 ### Energy (`rules/energy.ts`)
 
-- Fire: heats neighbors; deterministic ignition when far above threshold; lifetime deterministic (uses `aux`); on burnout converts to Ember and cools locally to avoid immediate re‑ignition
+- Fire: heats neighbors; deterministic ignition when far above threshold; lifetime deterministic and fuel‑aware (uses `aux` + origin tag): oil → Smoke on burnout, wood → Ember; on burnout cools locally to avoid immediate re‑ignition
 - Foam: deterministically quenches adjacent Fire by converting the fire cell to Foam; never converts Foam to Fire
 - Oil: more easily ignited and propagates better along contiguous Oil
 - Dust flash: high local Dust density near Fire may flash to Smoke and emits a small impulse
@@ -184,7 +184,7 @@ Renderer paints via palette; repaints only dirty chunks marked during the step.
 
 - Seeded RNG (`mulberry32`) provided at engine creation; used locally and consistently
 - Category passes read from `front`, write to `back` only; no pass reads from `back`
-- Counters/thresholds preferred over raw probabilities for test‑critical transitions (boil/etch/fuse)
+- Counters/thresholds preferred over raw probabilities for test‑critical transitions (boil/etch/fuse/near‑lava ignition)
 - Fixed `dt` and mass‑aware rates; avoid frame‑rate dependent behavior
 
 ---
@@ -224,5 +224,6 @@ All tests should pass deterministically under the default `dt`.
 - Pressure decay/diffusion constants and impulse blend factor (see `constants.ts`)
 - Liquid slope bias and spread; gas buoyancy and rise probabilities
 - Foam suppression strictness; ember burnout timing; acid etch budget/threshold
+- Lava cooling rate and solidification threshold/energy budget (see `constants.ts`)
 
 Most core constants live in `src/engine/constants.ts`; remaining local tunables are documented near their usage.

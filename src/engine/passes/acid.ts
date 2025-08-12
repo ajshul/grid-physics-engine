@@ -13,6 +13,7 @@ export function applyAcidEtching(
   const T = write.temp;
   const HUM = write.humidity;
   const AUX = write.aux; // reuse per-cell counter for etch budgets
+  const canWrite = (idx: number): boolean => W[idx] === R[idx];
   // find acid id by name once
   const acidId = findByName("Acid");
   const rubbleId = findByName("Rubble");
@@ -43,7 +44,7 @@ export function applyAcidEtching(
           const gain = Math.max(1, (8 * heatFactor * dt * 60) | 0);
           const b = Math.min(65535, (AUX[j] | 0) + gain);
           AUX[j] = b as any;
-          if (b >= BUDGET_THRESHOLD) {
+          if (b >= BUDGET_THRESHOLD && canWrite(j)) {
             W[j] = rubbleId;
             AUX[j] = 0 as any;
             T[j] += 5; // exothermic heat
@@ -55,7 +56,7 @@ export function applyAcidEtching(
         }
       }
       // deterministic smoke emission: one smoke per N conversions
-      if (conversionsThisCell > 0 && smokeId) {
+      if (conversionsThisCell > 0 && smokeId && canWrite(i)) {
         const count = (AUX[i] | 0) + conversionsThisCell;
         AUX[i] = count as any;
         if (count >= 3) {

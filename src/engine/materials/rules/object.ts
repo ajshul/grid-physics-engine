@@ -15,6 +15,7 @@ export function stepObjects(
   const R = read.mat;
   const W = write.mat;
   // const I = write.impulse; // not used in main loop; explosion writes impulse
+  const canWrite = (idx: number): boolean => W[idx] === R[idx];
   for (let y = h - 2; y >= 1; y--) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -25,7 +26,11 @@ export function stepObjects(
       const below = i + w;
       const belowId = R[below];
       // simple gravity for objects
-      if (belowId === 0 || registry[belowId]?.category === CAT.GAS) {
+      if (
+        (belowId === 0 || registry[belowId]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(below)
+      ) {
         W[i] = 0;
         W[below] = id;
         engine.markDirty(x, y);
@@ -58,7 +63,7 @@ export function stepObjects(
           const canL = R[left] === 0 && (W[left] === 0 || W[left] === R[left]);
           const canR =
             R[right] === 0 && (W[right] === 0 || W[right] === R[right]);
-          if (canL || canR) {
+          if ((canL || canR) && canWrite(i) && canWrite(down)) {
             const target = canL ? left : right;
             W[target] = mid;
             W[down] = id;

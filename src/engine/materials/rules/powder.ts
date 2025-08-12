@@ -15,6 +15,7 @@ export function stepPowder(
   const humidity = write.humidity;
   const VX = write.velX;
   const VY = write.velY;
+  const canWrite = (idx: number): boolean => matW[idx] === matR[idx];
   for (let y = h - 2; y >= 0; y--) {
     const dir = (y & 1) === 0 ? -1 : 1; // alternate to reduce bias per row
     for (let x = dir < 0 ? w - 2 : 1; dir < 0 ? x >= 1 : x <= w - 2; x += dir) {
@@ -29,7 +30,9 @@ export function stepPowder(
       const belowMat = registry[belowId];
       if (
         (belowId === 0 || (belowMat && belowMat.category === CAT.GAS)) &&
-        (matW[below] === 0 || registry[matW[below]]?.category === CAT.GAS)
+        (matW[below] === 0 || registry[matW[below]]?.category === CAT.GAS) &&
+        canWrite(i) &&
+        canWrite(below)
       ) {
         matW[i] = 0;
         matW[below] = id;
@@ -54,7 +57,7 @@ export function stepPowder(
             wBelowMat.category === CAT.LIQUID) ||
           wBelow === 0 ||
           registry[wBelow]?.category === CAT.GAS;
-        if (canSwap) {
+        if (canSwap && canWrite(i) && canWrite(below)) {
           matW[i] = belowId;
           matW[below] = id;
           VY[below] = 1;
@@ -87,7 +90,9 @@ export function stepPowder(
           (leftId === 0 || registry[leftId]?.category === CAT.GAS) &&
           (matW[tryL] === 0 || registry[matW[tryL]]?.category === CAT.GAS) &&
           (matW[i - 1] === 0 || registry[matW[i - 1]]?.category === CAT.GAS) &&
-          rand() < slip
+          rand() < slip &&
+          canWrite(i) &&
+          canWrite(tryL)
         ) {
           matW[i] = 0;
           matW[tryL] = id;
@@ -102,7 +107,9 @@ export function stepPowder(
           (rightId === 0 || registry[rightId]?.category === CAT.GAS) &&
           (matW[tryR] === 0 || registry[matW[tryR]]?.category === CAT.GAS) &&
           (matW[i + 1] === 0 || registry[matW[i + 1]]?.category === CAT.GAS) &&
-          rand() < slip
+          rand() < slip &&
+          canWrite(i) &&
+          canWrite(tryR)
         ) {
           matW[i] = 0;
           matW[tryR] = id;
@@ -118,7 +125,9 @@ export function stepPowder(
           (rightId === 0 || registry[rightId]?.category === CAT.GAS) &&
           (matW[tryR] === 0 || registry[matW[tryR]]?.category === CAT.GAS) &&
           (matW[i + 1] === 0 || registry[matW[i + 1]]?.category === CAT.GAS) &&
-          rand() < slip
+          rand() < slip &&
+          canWrite(i) &&
+          canWrite(tryR)
         ) {
           matW[i] = 0;
           matW[tryR] = id;
@@ -133,7 +142,9 @@ export function stepPowder(
           (leftId === 0 || registry[leftId]?.category === CAT.GAS) &&
           (matW[tryL] === 0 || registry[matW[tryL]]?.category === CAT.GAS) &&
           (matW[i - 1] === 0 || registry[matW[i - 1]]?.category === CAT.GAS) &&
-          rand() < slip
+          rand() < slip &&
+          canWrite(i) &&
+          canWrite(tryL)
         ) {
           matW[i] = 0;
           matW[tryL] = id;

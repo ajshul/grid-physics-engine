@@ -414,10 +414,21 @@ export function applyThermal(engine: Engine, write: GridView) {
         // deterministic ember lifetime using AUX as counter
         const life = AUX[i] | 0 || 500;
         AUX[i] = (life - 1) as any;
-        T[i] = Math.max(T[i], 160);
-        for (const j of n) T[j] = Math.max(T[j], T[i] - 8);
-        if (T[i] > 340) M[i] = FIRE;
-        if ((AUX[i] | 0) <= 0) {
+        // maintain a warm floor, but slowly decay
+        T[i] = Math.max(T[i] - 0.5, 150);
+        for (const j of n) T[j] = Math.max(T[j], T[i] - 12);
+        // Only reignite if there is nearby unburnt fuel
+        let hasFuelNeighbor = false;
+        for (const j of n) {
+          const mj = registry[M[j]];
+          if (mj?.flammable) {
+            hasFuelNeighbor = true;
+            break;
+          }
+        }
+        if (hasFuelNeighbor && T[i] > 380) M[i] = FIRE;
+        // convert to ash when life expires or cooled sufficiently
+        if ((AUX[i] | 0) <= 0 || T[i] < 140) {
           const ashId = getMaterialIdByName("Ash");
           if (ashId) M[i] = ashId as any;
         }

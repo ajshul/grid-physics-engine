@@ -15,6 +15,8 @@ export function stepPowder(
   const humidity = write.humidity;
   const VX = write.velX;
   const VY = write.velY;
+  const HUM = write.humidity;
+  const AUX = write.aux;
   const canWrite = (idx: number): boolean => matW[idx] === matR[idx];
   for (let y = h - 2; y >= 0; y--) {
     const dir = (y & 1) === 0 ? -1 : 1; // alternate to reduce bias per row
@@ -23,6 +25,32 @@ export function stepPowder(
       const id = matR[i];
       const m = registry[id];
       if (!m || m.category !== "powder") continue;
+      // Mud wets dust beneath over time if humidity is available
+      if (m.name === "Mud") {
+        const below = i + w;
+        if (matR[below] !== 0 && registry[matR[below]]?.name === "Dust") {
+          // transfer humidity budget and slowly convert when sufficiently wet
+          const transfer = Math.min(6, HUM[i]);
+          if (transfer > 0) {
+            HUM[i] = (HUM[i] - transfer) as any;
+            HUM[below] = Math.min(255, (HUM[below] | 0) + transfer) as any;
+            // accumulate wetting budget in AUX at the dust cell
+            AUX[below] = Math.min(
+              65535,
+              (AUX[below] | 0) + (transfer >> 1)
+            ) as any;
+            if ((AUX[below] | 0) > 120 && canWrite(below)) {
+              // convert to Mud by material id lookup
+              const mudId = Object.keys(registry).find(
+                (k) => registry[+k]?.name === "Mud"
+              );
+              if (mudId) matW[below] = +mudId;
+              HUM[below] = Math.max(HUM[below], 160) as any;
+              engine.markDirty(x, y + 1);
+            }
+          }
+        }
+      }
 
       const below = i + w;
       const belowId = matR[below];

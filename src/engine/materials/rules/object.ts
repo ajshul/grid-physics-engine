@@ -13,6 +13,7 @@ export function stepObjects(
   const { w, h } = engine.grid;
   const R = read.mat;
   const W = write.mat;
+  const I = write.impulse;
   for (let y = h - 2; y >= 1; y--) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -41,8 +42,31 @@ export function stepObjects(
           continue;
         }
       } else if (id === METEOR) {
-        // heat surroundings and keep moving downwards if possible
+        // heat surroundings and attempt displacement through powder/liquid
         heatNeighbors(engine, write, x, y, 2.0);
+        const down = i + w;
+        const mid = R[down];
+        const mDown = registry[mid];
+        if (
+          mDown &&
+          (mDown.category === CAT.POWDER || mDown.category === CAT.LIQUID)
+        ) {
+          // Push the medium sideways deterministically if room exists
+          const left = down - 1;
+          const right = down + 1;
+          const canL = R[left] === 0 && (W[left] === 0 || W[left] === R[left]);
+          const canR =
+            R[right] === 0 && (W[right] === 0 || W[right] === R[right]);
+          if (canL || canR) {
+            const target = canL ? left : right;
+            W[target] = mid;
+            W[down] = id;
+            W[i] = 0;
+            engine.markDirty(x, y);
+            engine.markDirty(canL ? x - 1 : x + 1, y + 1);
+            continue;
+          }
+        }
       }
     }
   }
@@ -59,6 +83,7 @@ function explode(
   const M = write.mat;
   const T = write.temp;
   const P = write.pressure;
+  const I = write.impulse;
   const smokeId = findByName("Smoke");
   const fireId = findByName("Fire");
   const rubbleId = findByName("Rubble");
@@ -72,8 +97,8 @@ function explode(
       M[i] = smokeId ?? 0;
       if (fireId && Math.hypot(dx, dy) < r * 0.6) M[i] = fireId;
       T[i] = Math.max(T[i], 300);
-      // radial pressure impulse
-      P[i] = Math.max(P[i], (r * 20 - (dx * dx + dy * dy)) | 0);
+      // radial impulse (separate from static pressure)
+      I[i] = Math.max(I[i], (r * 20 - (dx * dx + dy * dy)) | 0);
       // occasional shrapnel turning nearby solids into rubble
       if (rubbleId && Math.hypot(dx, dy) > r * 0.5 && engine.rand() < 0.05) {
         const mid = M[i];

@@ -2,7 +2,7 @@ import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { CAT } from "../categories";
-import { LAVA, STEAM, WATER } from "../presets";
+import { LAVA, STEAM, WATER, FIRE } from "../presets";
 
 export function stepLiquid(
   engine: Engine,
@@ -14,6 +14,7 @@ export function stepLiquid(
   const R = read.mat;
   const W = write.mat;
   const P = write.pressure;
+  const I = write.impulse;
   const T = write.temp;
   const HUM = write.humidity;
   for (let y = h - 2; y >= 0; y--) {
@@ -28,36 +29,68 @@ export function stepLiquid(
       const belowMat = registry[R[below]];
       const aboveMat = registry[R[above]];
 
+      // remove any artificial holds; liquids should move according to rules
+
       // immediate reaction: water + lava -> stone + steam (pre-move)
       if (
         (id === WATER && R[below] === LAVA) ||
         (id === LAVA && R[below] === WATER)
       ) {
-        const stoneId = Object.keys(registry).find(
-          (k) => registry[+k]?.name === "Stone"
-        );
-        const steamId = STEAM;
-        if (stoneId) {
-          W[below] = +stoneId;
-          W[i] = steamId;
-          // heat burst
-          T[i] = Math.max(T[i], 200);
+        // require some heating before instant vitrification: avoid instant coat
+        const waterOnTop = id === WATER && R[below] === LAVA;
+        const lavaOnTop = id === LAVA && R[below] === WATER;
+        const hotEnough = waterOnTop
+          ? T[i] > 80 || T[below] > 500
+          : T[below] > 80 || T[i] > 500;
+        if (!hotEnough) {
+          // just exchange a bit of heat and skip reaction this frame
+          T[i] = Math.max(T[i], 60);
           T[below] = Math.max(T[below], 200);
-          // small outward gas push via pressure impulse
-          const r = 2;
-          for (let dy = -r; dy <= r; dy++) {
-            for (let dx = -r; dx <= r; dx++) {
-              if (dx * dx + dy * dy > r * r) continue;
-              const px = x + dx;
-              const py = y + dy;
-              if (px < 1 || py < 1 || px >= w - 1 || py >= h - 1) continue;
-              const k = py * w + px;
-              P[k] = Math.max(P[k], (r * 4 - (dx * dx + dy * dy)) | 0);
+          // do not continue; allow normal movement below
+        } else {
+          const stoneId = Object.keys(registry).find(
+            (k) => registry[+k]?.name === "Stone"
+          );
+          const steamId = STEAM;
+          if (stoneId) {
+            W[below] = +stoneId;
+            W[i] = steamId;
+            // heat burst
+            T[i] = Math.max(T[i], 200);
+            T[below] = Math.max(T[below], 200);
+            // small outward gas push via impulse buffer
+            const r = 2;
+            for (let dy = -r; dy <= r; dy++) {
+              for (let dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) continue;
+                const px = x + dx;
+                const py = y + dy;
+                if (px < 1 || py < 1 || px >= w - 1 || py >= h - 1) continue;
+                const k = py * w + px;
+                I[k] = Math.max(I[k], (r * 4 - (dx * dx + dy * dy)) | 0);
+              }
             }
           }
+          engine.markDirty(x, y);
+          engine.markDirty(x, y + 1);
+          continue;
         }
-        engine.markDirty(x, y);
-        engine.markDirty(x, y + 1);
+      }
+
+      // Tiny-puddle and sticky-foam/acid hold: avoid moving isolated droplets or sticky phases
+      const left = i - 1;
+      const right = i + 1;
+      const up = i - w;
+      const nearLiquid =
+        [left, right, up, below].some(
+          (j) => registry[R[j]]?.category === CAT.LIQUID && R[j] !== id
+        ) || [left, right, up, below].some((j) => R[j] === id);
+      const isIsolatedDroplet = !nearLiquid;
+      const baseBp = registry[WATER]?.boilingPoint ?? 100;
+      const hotNucleating = id === WATER && T[i] >= baseBp - 5;
+      const sticky = m.name === "Foam" || m.name === "Acid";
+      if (sticky || hotNucleating || isIsolatedDroplet) {
+        // Skip motion for this cell this frame
         continue;
       }
 
@@ -199,7 +232,7 @@ export function stepLiquid(
           // heat burst
           T[i] = Math.max(T[i], 200);
           T[below] = Math.max(T[below], 200);
-          // small outward gas push via pressure impulse
+          // small outward gas push via impulse buffer
           const r = 2;
           for (let dy = -r; dy <= r; dy++) {
             for (let dx = -r; dx <= r; dx++) {
@@ -208,7 +241,7 @@ export function stepLiquid(
               const py = y + dy;
               if (px < 1 || py < 1 || px >= w - 1 || py >= h - 1) continue;
               const k = py * w + px;
-              P[k] = Math.max(P[k], (r * 4 - (dx * dx + dy * dy)) | 0);
+              I[k] = Math.max(I[k], (r * 4 - (dx * dx + dy * dy)) | 0);
             }
           }
         }

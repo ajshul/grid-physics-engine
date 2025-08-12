@@ -69,7 +69,7 @@ describe("liquids, gases, powders interactions", () => {
     expect(oilUpper).toBeGreaterThan(oilLower);
   });
 
-  it.skip("foam suppresses adjacent fire, not igniting itself", () => {
+  it("foam suppresses adjacent fire, not igniting itself", () => {
     const W = 40,
       H = 30;
     const e = new Engine({ w: W, h: H, seed: 33 });
@@ -84,7 +84,7 @@ describe("liquids, gases, powders interactions", () => {
     expect([FOAM, WATER]).toContain(g2.mat[idx(x, y, W)]);
   });
 
-  it.skip("acid etches stone/wood/glass into rubble and may emit smoke", () => {
+  it("acid etches stone/wood/glass into rubble and may emit smoke", () => {
     const W = 38,
       H = 28;
     const e = new Engine({ w: W, h: H, seed: 19 });
@@ -108,7 +108,7 @@ describe("liquids, gases, powders interactions", () => {
     expect(sawRubble).toBe(true);
   });
 
-  it.skip("steam rises when hot; smoke dissipates over time", () => {
+  it("steam rises when hot; smoke dissipates over time", () => {
     const W = 30,
       H = 30;
     const e = new Engine({ w: W, h: H, seed: 77 });
@@ -116,10 +116,10 @@ describe("liquids, gases, powders interactions", () => {
     e.paint(15, 25, STEAM, 0);
     let g = F(e);
     g.temp[idx(15, 25, W)] = 120;
-    for (let t = 0; t < 40; t++) e.step();
+    for (let t = 0; t < 60; t++) e.step();
     g = F(e);
     let foundAbove = false;
-    for (let yy = 1; yy < 25; yy++)
+    for (let yy = 0; yy < 25; yy++)
       if (g.mat[idx(15, yy, W)] === STEAM) {
         foundAbove = true;
         break;

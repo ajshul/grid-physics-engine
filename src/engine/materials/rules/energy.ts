@@ -1,7 +1,7 @@
 import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
-import { FIRE, FOAM, SMOKE, STEAM, WATER, OIL } from "../presets";
+import { FIRE, FOAM, SMOKE, STEAM, WATER, OIL, EMBER } from "../presets";
 
 function findByName(name: string): number | undefined {
   const id = Object.keys(registry).find((k) => registry[+k]?.name === name);
@@ -20,6 +20,7 @@ export function stepEnergy(
   const T = write.temp;
   const AUX = write.aux;
   const HUM = write.humidity;
+  const IMP = write.impulse;
 
   const ASH = findByName("Ash");
   const DUST = findByName("Dust");
@@ -47,10 +48,18 @@ export function stepEnergy(
           break;
         }
         if (nid === FOAM) {
-          if (rand() < 0.9) {
-            W[i] = 0; // foam absorbs heat and smothers
+          // Deterministic suppression if any foam neighbor and temperature not extreme
+          if (T[i] < 800) {
+            W[i] = FOAM; // smothered into foam mass (stable)
             extinguished = true;
             break;
+          } else {
+            // at very high temp, allow small chance to persist
+            if (rand() < 0.05) {
+              W[i] = FOAM;
+              extinguished = true;
+              break;
+            }
           }
         }
       }
@@ -70,10 +79,16 @@ export function stepEnergy(
           }
           const suppression = Math.min(0.5, halo * 0.15);
           const humidityFactor = 1 - Math.min(0.6, ((HUM[j] || 0) / 255) * 0.6);
-          const base = 0.08 * (1 - suppression) * humidityFactor; // baseline ignition chance
+          // Deterministic ignition when far above threshold; probabilistic near threshold
+          const threshold = mat.combustionTemp ?? 300;
+          if (T[j] >= threshold + 40) {
+            W[j] = FIRE;
+            continue;
+          }
+          const base = 0.05 * (1 - suppression) * humidityFactor;
           const tempBoost = Math.min(
             0.35,
-            Math.max(0, (T[j] - (mat.combustionTemp ?? 300)) / 800)
+            Math.max(0, (T[j] - threshold) / 600)
           );
           let chance = base + tempBoost;
           // Oil synergy: easier propagation along contiguous oil cells
@@ -89,31 +104,37 @@ export function stepEnergy(
         }
       }
 
-      // Lifetime and burnout → smoke/ash
+      // Lifetime and burnout → smoke/ember (deterministic duration)
       let life = AUX[i];
-      if (!life) life = 30 + ((rand() * 10) | 0);
+      if (!life) life = (25 * Math.max(1, Math.round(engine.dt * 60))) as any;
       life--;
-      AUX[i] = life;
+      AUX[i] = life as any;
       if (life <= 0) {
-        // leave smoke; occasionally ash
-        if (ASH && rand() < 0.3) W[i] = ASH;
-        else W[i] = SMOKE;
+        // on burnout convert to ember (which cools and eventually ashes)
+        W[i] = EMBER;
+        // drop local temperature to avoid immediate re-ignition loops
+        T[i] = Math.min(T[i], 260);
       }
+      // If surrounded by cold non-flammable materials, shorten lifetime slightly
+      const neigh = [i - 1, i + 1, i - w, i + w];
+      let coldNeighbors = 0;
+      for (const j of neigh)
+        if (T[j] < 100 && !registry[R[j]]?.flammable) coldNeighbors++;
+      if (coldNeighbors >= 3 && AUX[i] > 0) AUX[i] = (AUX[i] - 1) as any;
 
-      // Dust flash hazard: if nearby density of dust is high, flash to smoke/ash with a small pressure bump
+      // Dust flash hazard: if nearby density of dust is high, flash to smoke/ash with a small impulse bump
       if (DUST) {
         let dustCount = 0;
         for (const j of n) if (R[j] === DUST) dustCount++;
         if (dustCount >= 3 && rand() < 0.2) {
           for (const j of n) if (R[j] === DUST) W[j] = SMOKE;
-          // small local pressure bump
+          // small local impulse bump
           const { w: Ww } = engine.grid;
-          const Pi = write.pressure;
-          Pi[i] = Math.max(Pi[i], 20);
-          Pi[i - 1] = Math.max(Pi[i - 1], 12);
-          Pi[i + 1] = Math.max(Pi[i + 1], 12);
-          Pi[i - Ww] = Math.max(Pi[i - Ww], 12);
-          Pi[i + Ww] = Math.max(Pi[i + Ww], 12);
+          IMP[i] = Math.max(IMP[i], 20);
+          IMP[i - 1] = Math.max(IMP[i - 1], 12);
+          IMP[i + 1] = Math.max(IMP[i + 1], 12);
+          IMP[i - Ww] = Math.max(IMP[i - Ww], 12);
+          IMP[i + Ww] = Math.max(IMP[i + Ww], 12);
         }
       }
     }

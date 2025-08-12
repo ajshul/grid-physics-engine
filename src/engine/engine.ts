@@ -15,6 +15,8 @@ export interface EngineOptions {
   w: number;
   h: number;
   seed?: number;
+  // Fixed simulation time step in seconds. Defaults to 1/60 s.
+  dt?: number;
 }
 
 export class Engine {
@@ -23,11 +25,14 @@ export class Engine {
   rand!: () => number;
   dirty: Set<number> = new Set<number>();
   chunkSize = 64;
+  // Fixed simulation time step in seconds
+  dt = 1 / 60;
 
   constructor(opts: EngineOptions) {
     this.opts = opts;
     this.grid = createGrid(this.opts.w, this.opts.h);
     this.rand = mulberry32(this.opts.seed ?? 1337);
+    this.dt = typeof opts.dt === "number" && opts.dt > 0 ? opts.dt : 1 / 60;
   }
 
   paint(x: number, y: number, materialId: number, radius = 3): void {
@@ -66,6 +71,7 @@ export class Engine {
         }
         // clear auxiliary fields when painting new cells
         g.pressure[i] = 0;
+        g.impulse[i] = 0;
         g.aux[i] = 0;
         g.humidity[i] = 0;
         g.phase[i] = 0;
@@ -91,8 +97,10 @@ export class Engine {
     gB.temp.set(gA.temp);
     gB.velX.set(gA.velX);
     gB.velY.set(gA.velY);
-    gB.flags.set(gA.flags);
+    // flags used for per-frame hints (e.g., hysteresis); clear each step
+    gB.flags.fill(0);
     gB.pressure.set(gA.pressure);
+    gB.impulse.set(gA.impulse);
     gB.aux.set(gA.aux);
     gB.humidity.set(gA.humidity);
     gB.phase.set(gA.phase);

@@ -13,17 +13,18 @@ export function computePressure(
   const { w, h } = engine.grid;
   const mat = read.mat;
   const P = write.pressure;
+  const I = write.impulse;
 
-  // 1) decay existing pressure (carry impulses between frames)
-  const decay = 0.95; // configurable if needed
+  // 1) decay existing static pressure and the impulse field separately
+  const dt = engine.dt;
+  const staticDecay = Math.pow(0.95, Math.max(1, dt * 60));
+  const impulseDecay = Math.pow(0.8, Math.max(1, dt * 60));
   for (let i = 0; i < P.length; i++) {
-    const v = P[i] | 0;
-    const decayed = (v * decay) | 0;
-    // bias toward zero by subtracting 1 when small to clear noise
-    P[i] = clamp16(stepTowardZero(decayed));
+    P[i] = clamp16(stepTowardZero(((P[i] | 0) * staticDecay) | 0));
+    I[i] = clamp16(stepTowardZero(((I[i] | 0) * impulseDecay) | 0));
   }
 
-  // 2) bottom-up accumulation for liquids; top-down for gases
+  // 2) bottom-up accumulation for liquids; top-down for gases (quasi-static)
   for (let y = h - 2; y >= 1; y--) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -34,17 +35,20 @@ export function computePressure(
         const below = i + w;
         const base = P[below] | 0;
         const dens = Math.max(1, Math.floor((m.density ?? 5) * 2));
-        const next = base + dens;
+        // scale per-step accumulation by dt relative to 60 Hz baseline
+        const stepScale = Math.max(1, Math.round(engine.dt * 60));
+        const next = base + dens * stepScale;
         if ((P[i] | 0) < next) P[i] = clamp16(next);
       } else if (m.category === CAT.GAS) {
         const below = i + w;
-        const next = (P[below] | 0) - 1;
+        const stepScale = Math.max(1, Math.round(engine.dt * 60));
+        const next = (P[below] | 0) - 1 * stepScale;
         if ((P[i] | 0) > next) P[i] = clamp16(next);
       }
     }
   }
 
-  // 3) light diffusion to bleed spikes (no temp buffers, single-pass)
+  // 3) light diffusion to bleed spikes (static field only)
   const alpha = 0.05;
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
@@ -58,6 +62,15 @@ export function computePressure(
       const blended = here + (avg - here) * alpha;
       P[i] = clamp16(blended | 0);
     }
+  }
+
+  // 4) blend impulse into pressure used by movement, then partially write back
+  // We add a fraction of the impulse to P to produce the effective pressure
+  // for this frame, but keep impulse around with its own decay so it persists
+  // for a few frames.
+  for (let i = 0; i < P.length; i++) {
+    const eff = ((P[i] | 0) + (I[i] | 0) * 0.6) | 0;
+    P[i] = clamp16(eff);
   }
 }
 

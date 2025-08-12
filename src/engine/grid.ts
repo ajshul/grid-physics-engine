@@ -5,6 +5,9 @@ export interface GridView {
   velY: Int8Array;
   flags: Uint8Array;
   pressure: Int16Array; // approximate hydrostatic/air pressure
+  // transient pressure impulses (explosions, reactions). Decays quickly and
+  // is blended into the final `pressure` field during the pressure pass.
+  impulse: Int16Array;
   aux: Uint16Array; // generic per-cell data (timers, age, etc.)
   humidity: Uint8Array; // 0..255 wetness proxy (drives cohesion and fire suppression)
   // latent heat accumulator for phase changes (ice↔water↔steam). Units are
@@ -28,6 +31,7 @@ export function createGrid(w: number, h: number): Grid {
     velY: new Int8Array(w * h),
     flags: new Uint8Array(w * h),
     pressure: new Int16Array(w * h),
+    impulse: new Int16Array(w * h),
     aux: new Uint16Array(w * h),
     humidity: new Uint8Array(w * h),
     phase: new Float32Array(w * h),

@@ -33,7 +33,7 @@ function tank(e: Engine, x0: number, y0: number, x1: number, y1: number) {
 }
 
 describe("energy, objects, solids behaviors", () => {
-  it.skip("fire heats neighbors and can ignite flammable materials; foam suppresses", () => {
+  it("fire heats neighbors and can ignite flammable materials; foam suppresses", () => {
     const W = 36,
       H = 24;
     const e = new Engine({ w: W, h: H, seed: 321 });
@@ -53,7 +53,7 @@ describe("energy, objects, solids behaviors", () => {
     expect([OIL, FIRE, FOAM, WATER]).toContain(v);
   });
 
-  it.skip("fire eventually burns out to smoke or ember and cools down", () => {
+  it("fire eventually burns out to smoke or ember and cools down", () => {
     const W = 30,
       H = 20;
     const e = new Engine({ w: W, h: H, seed: 222 });
@@ -70,7 +70,7 @@ describe("energy, objects, solids behaviors", () => {
     expect(gv.temp[idx(x, y, W)]).toBeLessThan(500);
   });
 
-  it.skip("bomb fuses then explodes with heat, smoke/fire and pressure impulse", () => {
+  it("bomb fuses then explodes with heat, smoke/fire and pressure impulse", () => {
     const W = 40,
       H = 24;
     const e = new Engine({ w: W, h: H, seed: 999 });

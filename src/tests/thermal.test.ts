@@ -67,7 +67,7 @@ describe("thermal fundamentals", () => {
     expect(g2.temp[idx(x, y, W)]).toBeLessThanOrEqual(15);
   });
 
-  it.skip("ice eventually melts to water only after sufficient latent heat accumulates", () => {
+  it("ice eventually melts to water only after sufficient latent heat accumulates", () => {
     const W = 32,
       H = 24;
     const e = new Engine({ w: W, h: H, seed: 11 });
@@ -103,7 +103,7 @@ describe("thermal fundamentals", () => {
     expect(g2.temp[idx(x, y, W)]).toBeLessThan(80);
   });
 
-  it.skip("boiling requires sustained heat and is delayed by pressure", () => {
+  it("boiling requires sustained heat and is delayed by pressure", () => {
     const W = 32,
       H = 32;
     const e = new Engine({ w: W, h: H, seed: 13 });

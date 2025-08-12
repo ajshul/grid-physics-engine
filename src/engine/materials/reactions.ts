@@ -22,6 +22,67 @@ import {
   LAVA_COOLING_PER_SEC,
   LAVA_SOLIDIFY_ENERGY,
   LAVA_SOLIDIFY_TEMP_C,
+  CONDUCTIVITY_DEFAULT_EMPTY,
+  CONDUCTIVITY_DEFAULT_GAS,
+  CONDUCTIVITY_DEFAULT_LIQUID,
+  CONDUCTIVITY_DEFAULT_POWDER,
+  CONDUCTIVITY_DEFAULT_SOLID,
+  HEAT_CAPACITY_DEFAULT_EMPTY,
+  HEAT_CAPACITY_DEFAULT_GAS,
+  HEAT_CAPACITY_DEFAULT_LIQUID,
+  HEAT_CAPACITY_DEFAULT_POWDER,
+  HEAT_CAPACITY_DEFAULT_SOLID,
+  MIN_EFFECTIVE_MASS,
+  BASE_COOLING_GAS_PER_SEC,
+  BASE_COOLING_LIQUID_PER_SEC,
+  BASE_COOLING_SOLID_PER_SEC,
+  EMPTY_COUPLING_PER_SEC,
+  STEAM_BASE_COOLING_PER_SEC,
+  COOLANT_BOOST_FOAM,
+  COOLANT_BOOST_ICE,
+  COOLANT_BOOST_WATER,
+  RADIATIVE_COOLING_SCALE,
+  RADIATIVE_TEMP_DIVISOR,
+  RADIATIVE_TEMP_START_C,
+  WATER_BP_PRESSURE_CAP_C,
+  WATER_BP_PRESSURE_COEFF_SQRT,
+  WATER_BOIL_THRESHOLD_ENERGY,
+  WATER_BOIL_ACCUM_MULT_AT_60HZ,
+  WATER_BOIL_PROGRESS_DECAY_PER_SEC,
+  STEAM_CONDENSE_TEMP_C,
+  STEAM_CONDENSE_AGE_MIN,
+  STEAM_CONDENSE_NEAR_COOL_AGE_MIN,
+  NEAR_LAVA_IGNITION_ADD_PER_60HZ,
+  NEAR_LAVA_IGNITION_BUDGET,
+  OIL_AUTO_IGNITE_TEMP_C,
+  LAVA_NEIGHBOR_HEAT_FACTOR,
+  LAVA_NEIGHBOR_HEAT_MAX_ADD_C,
+  LAVA_NEARBY_PREHEAT_BASE_BOOST_C,
+  LAVA_NEARBY_PREHEAT_MAX_ADD_C,
+  LAVA_NEARBY_PREHEAT_AMBIENT_DIFF_COEFF,
+  LAVA_SOLIDIFY_ACCUM_SCALE,
+  ICE_NEIGHBOR_COOL_DELTA_C,
+  ICE_NEIGHBOR_COOL_CLAMP_MIN_C,
+  RUBBER_POP_TEMP_C,
+  WOOD_CHARRING_MIN_TEMP_C,
+  WOOD_CHARRING_MAX_TEMP_C,
+  WOOD_CHARRING_PROB_PER_STEP,
+  FOAM_DECAY_PROB_PER_STEP,
+  HUMIDITY_DECAY_PER_STEP,
+  DUST_TO_MUD_PROB_PER_STEP,
+  MUD_INITIAL_HUMIDITY,
+  MUD_DRY_HUMIDITY_THRESHOLD,
+  MUD_DRY_PROB_PER_STEP,
+  SAND_VITRIFY_TEMP_C,
+  SAND_VITRIFY_PROB_PER_STEP,
+  SMOKE_TEMP_CLAMP_MIN_C,
+  SMOKE_TEMP_CLAMP_MAX_C,
+  EMBER_INITIAL_LIFE_STEPS,
+  EMBER_COOL_DECAY_PER_STEP,
+  EMBER_MIN_TEMP_C,
+  EMBER_NEIGHBOR_WARM_DELTA_C,
+  EMBER_REIGNITE_TEMP_C,
+  EMBER_ASH_COOL_TEMP_C,
 } from "../constants";
 import { getMaterialIdByName } from "../utils";
 
@@ -49,36 +110,36 @@ export function applyThermal(engine: Engine, write: GridView) {
   // Temperature updates: dTi = Q / mass_i, dTj = -Q / mass_j
   const getConductivity = (id: number): number => {
     const m = registry[id];
-    if (!m) return 0.1; // empty cell behaves like air
+    if (!m) return CONDUCTIVITY_DEFAULT_EMPTY; // empty cell behaves like air
     if (typeof m.conductivity === "number") return clamp01(m.conductivity);
     switch (m.category) {
       case "gas":
-        return 0.03;
+        return CONDUCTIVITY_DEFAULT_GAS;
       case "liquid":
-        return 0.15;
+        return CONDUCTIVITY_DEFAULT_LIQUID;
       case "powder":
-        return 0.12;
+        return CONDUCTIVITY_DEFAULT_POWDER;
       case "solid":
-        return 0.2;
+        return CONDUCTIVITY_DEFAULT_SOLID;
       default:
-        return 0.1;
+        return CONDUCTIVITY_DEFAULT_EMPTY;
     }
   };
   const getHeatCapacity = (id: number): number => {
     const m = registry[id];
-    if (!m) return 1.0;
+    if (!m) return HEAT_CAPACITY_DEFAULT_EMPTY;
     if (typeof m.heatCapacity === "number") return m.heatCapacity;
     switch (m.category) {
       case "liquid":
-        return 4.0;
+        return HEAT_CAPACITY_DEFAULT_LIQUID;
       case "solid":
-        return 0.9;
+        return HEAT_CAPACITY_DEFAULT_SOLID;
       case "powder":
-        return 0.6;
+        return HEAT_CAPACITY_DEFAULT_POWDER;
       case "gas":
-        return 1.0;
+        return HEAT_CAPACITY_DEFAULT_GAS;
       default:
-        return 1.0;
+        return HEAT_CAPACITY_DEFAULT_EMPTY;
     }
   };
   const getDensity = (id: number): number => {
@@ -99,9 +160,12 @@ export function applyThermal(engine: Engine, write: GridView) {
         const k2 = getConductivity(M[right]);
         const kEff = (k1 + k2) * 0.5 * CONDUCTION_SCALE * dt;
         if (kEff > 0) {
-          const mass1 = Math.max(0.2, getHeatCapacity(M[i]) * getDensity(M[i]));
+          const mass1 = Math.max(
+            MIN_EFFECTIVE_MASS,
+            getHeatCapacity(M[i]) * getDensity(M[i])
+          );
           const mass2 = Math.max(
-            0.2,
+            MIN_EFFECTIVE_MASS,
             getHeatCapacity(M[right]) * getDensity(M[right])
           );
           const dT = T[right] - T[i];
@@ -117,9 +181,12 @@ export function applyThermal(engine: Engine, write: GridView) {
         const k2 = getConductivity(M[down]);
         const kEff = (k1 + k2) * 0.5 * CONDUCTION_SCALE * dt;
         if (kEff > 0) {
-          const mass1 = Math.max(0.2, getHeatCapacity(M[i]) * getDensity(M[i]));
+          const mass1 = Math.max(
+            MIN_EFFECTIVE_MASS,
+            getHeatCapacity(M[i]) * getDensity(M[i])
+          );
           const mass2 = Math.max(
-            0.2,
+            MIN_EFFECTIVE_MASS,
             getHeatCapacity(M[down]) * getDensity(M[down])
           );
           const dT = T[down] - T[i];
@@ -145,12 +212,16 @@ export function applyThermal(engine: Engine, write: GridView) {
         let nearLava = false;
         for (const j of n) if (M[j] === LAVA) nearLava = true;
         if (nearLava) {
-          const baseBoost = 80; // base radiant boost
+          const baseBoost = LAVA_NEARBY_PREHEAT_BASE_BOOST_C; // base radiant boost
           const tempHere = T[i];
           // apply a capped increase to simulate intense local heating
           const add = Math.min(
-            120,
-            Math.max(0, baseBoost + (AMBIENT - tempHere) * -0.05)
+            LAVA_NEARBY_PREHEAT_MAX_ADD_C,
+            Math.max(
+              0,
+              baseBoost +
+                (AMBIENT - tempHere) * LAVA_NEARBY_PREHEAT_AMBIENT_DIFF_COEFF
+            )
           );
           if (add > 0) T[i] += add;
         }
@@ -158,24 +229,30 @@ export function applyThermal(engine: Engine, write: GridView) {
       const category = m?.category;
       const cpDefault = getHeatCapacity(id);
       const density = getDensity(id);
-      const mass = Math.max(0.2, cpDefault * density);
+      const mass = Math.max(MIN_EFFECTIVE_MASS, cpDefault * density);
       const coolantBoostName = m?.name;
       const coolantBoost =
         coolantBoostName === "Water"
-          ? 0.02
+          ? COOLANT_BOOST_WATER
           : coolantBoostName === "Ice"
-          ? 0.035
+          ? COOLANT_BOOST_ICE
           : coolantBoostName === "Foam"
-          ? 0.01
+          ? COOLANT_BOOST_FOAM
           : 0;
       let baseCoolingPerSec =
-        category === "solid" ? 0.5 : category === "liquid" ? 0.7 : 0.5; // gases cool moderately
+        category === "solid"
+          ? BASE_COOLING_SOLID_PER_SEC
+          : category === "liquid"
+          ? BASE_COOLING_LIQUID_PER_SEC
+          : BASE_COOLING_GAS_PER_SEC; // gases cool moderately
       // treat empty cells (air) as highly coupled to ambient to avoid heat lock-in
-      if (id === 0) baseCoolingPerSec = 6.0;
+      if (id === 0) baseCoolingPerSec = EMPTY_COUPLING_PER_SEC;
       // keep steam hot a bit longer to allow visible rise before condensing
-      if (m?.name === "Steam") baseCoolingPerSec = 0.05;
-      const highTemp = Math.max(0, T[i] - 150) / 600; // radiative tail
-      let coolingPerSec = baseCoolingPerSec + highTemp * 0.4 + coolantBoost;
+      if (m?.name === "Steam") baseCoolingPerSec = STEAM_BASE_COOLING_PER_SEC;
+      const highTemp =
+        Math.max(0, T[i] - RADIATIVE_TEMP_START_C) / RADIATIVE_TEMP_DIVISOR; // radiative tail
+      let coolingPerSec =
+        baseCoolingPerSec + highTemp * RADIATIVE_COOLING_SCALE + coolantBoost;
       // convert to per-step coefficient, scale by mass
       const ambientDelta = ((AMBIENT - T[i]) * (coolingPerSec * dt)) / mass;
       T[i] += ambientDelta;
@@ -224,14 +301,23 @@ export function applyThermal(engine: Engine, write: GridView) {
         const baseBp = registry[WATER]?.boilingPoint ?? 100;
         const p = P[i] | 0;
         // gentle monotonic elevation with sqrt curve
-        const bpAdj = baseBp + Math.min(80, Math.sqrt(Math.max(0, p)) * 0.8);
+        const bpAdj =
+          baseBp +
+          Math.min(
+            WATER_BP_PRESSURE_CAP_C,
+            Math.sqrt(Math.max(0, p)) * WATER_BP_PRESSURE_COEFF_SQRT
+          );
         const overheat = Math.max(0, T[i] - bpAdj);
         const cpWater = getHeatCapacity(WATER);
-        const massWater = Math.max(0.2, cpWater * getDensity(WATER));
-        const BOIL_THRESHOLD = 6000; // energy units to accumulate before phase change
+        const massWater = Math.max(
+          MIN_EFFECTIVE_MASS,
+          cpWater * getDensity(WATER)
+        );
+        const BOIL_THRESHOLD = WATER_BOIL_THRESHOLD_ENERGY; // energy units to accumulate before phase change
         if (overheat > 0) {
           // accumulate energy towards vaporization, scaled by dt and mass
-          const add = (overheat * cpWater * (dt * 10)) | 0;
+          const add =
+            (overheat * cpWater * (dt * WATER_BOIL_ACCUM_MULT_AT_60HZ)) | 0;
           const prog = Math.min(65535, (AUX[i] | 0) + Math.max(1, add));
           AUX[i] = prog;
           if (prog >= BOIL_THRESHOLD) {
@@ -244,18 +330,18 @@ export function applyThermal(engine: Engine, write: GridView) {
           }
         } else {
           // below bp → lose progress gradually
-          const dec = Math.max(1, (10 * dt) | 0);
+          const dec = Math.max(1, (WATER_BOIL_PROGRESS_DECAY_PER_SEC * dt) | 0);
           if (AUX[i] > 0) AUX[i] = Math.max(0, (AUX[i] | 0) - dec) as any;
         }
       }
 
       // --- Steam condensation ---
       if (id === STEAM) {
-        const condenseTemp = 90;
+        const condenseTemp = STEAM_CONDENSE_TEMP_C;
         // add an age delay using AUX so fresh steam rises before condensing
         const age = (AUX[i] | 0) + 1;
         AUX[i] = Math.min(65535, age) as any;
-        if (T[i] < condenseTemp && age > 80) M[i] = WATER;
+        if (T[i] < condenseTemp && age > STEAM_CONDENSE_AGE_MIN) M[i] = WATER;
         // near cool surfaces condense faster
         let nearCool = false;
         for (const j of n) {
@@ -264,7 +350,12 @@ export function applyThermal(engine: Engine, write: GridView) {
           if (mj.name === "Ice" || (mj.category === "solid" && T[j] < 30))
             nearCool = true;
         }
-        if (nearCool && T[i] < 90 && age > 40) M[i] = WATER;
+        if (
+          nearCool &&
+          T[i] < STEAM_CONDENSE_TEMP_C &&
+          age > STEAM_CONDENSE_NEAR_COOL_AGE_MIN
+        )
+          M[i] = WATER;
       }
 
       // --- Combustion/ignition ---
@@ -283,10 +374,12 @@ export function applyThermal(engine: Engine, write: GridView) {
         const neigh = [i - 1, i + 1, i - w, i + w];
         let nearLava = false;
         for (const j of neigh) if (M[j] === LAVA) nearLava = true;
-        const add = nearLava ? Math.max(1, (12 * dt * 60) | 0) : -1;
+        const add = nearLava
+          ? Math.max(1, (NEAR_LAVA_IGNITION_ADD_PER_60HZ * dt * 60) | 0)
+          : -1;
         const budget = Math.max(0, (AUX[i] | 0) + add);
         AUX[i] = Math.min(65535, budget) as any;
-        if (budget >= 24) {
+        if (budget >= NEAR_LAVA_IGNITION_BUDGET) {
           M[i] = FIRE;
           VX[i] =
             m.name === "Oil"
@@ -297,7 +390,7 @@ export function applyThermal(engine: Engine, write: GridView) {
           AUX[i] = 0 as any;
         }
       }
-      if (id === OIL && T[i] >= 250) {
+      if (id === OIL && T[i] >= OIL_AUTO_IGNITE_TEMP_C) {
         M[i] = FIRE;
         VX[i] = 1 as any;
       }
@@ -310,20 +403,29 @@ export function applyThermal(engine: Engine, write: GridView) {
       if (id === LAVA) {
         // cool toward ambient at a gentle rate (configurable), mass-aware
         const cp = getHeatCapacity(LAVA);
-        const massLava = Math.max(0.2, cp * getDensity(LAVA));
+        const massLava = Math.max(MIN_EFFECTIVE_MASS, cp * getDensity(LAVA));
         const dT = ((AMBIENT - T[i]) * (LAVA_COOLING_PER_SEC * dt)) / massLava;
         T[i] += dT;
         // radiant/conductive heating of immediate neighbors to promote ignition of flammables
         const neigh = [i - 1, i + 1, i - w, i + w];
         for (const j of neigh) {
           // boost neighbor temperature based on lava heat, capped
-          const targetBoost = Math.max(0, Math.min(120, (T[i] - T[j]) * 0.3));
+          const targetBoost = Math.max(
+            0,
+            Math.min(
+              LAVA_NEIGHBOR_HEAT_MAX_ADD_C,
+              (T[i] - T[j]) * LAVA_NEIGHBOR_HEAT_FACTOR
+            )
+          );
           T[j] += targetBoost;
         }
         // accumulate a latent-like budget while lava is below a threshold
         if (T[i] <= LAVA_SOLIDIFY_TEMP_C) {
           const deficit = LAVA_SOLIDIFY_TEMP_C - T[i];
-          const add = Math.max(1, (deficit * cp * (dt * 30)) | 0);
+          const add = Math.max(
+            1,
+            (deficit * cp * (dt * LAVA_SOLIDIFY_ACCUM_SCALE)) | 0
+          );
           AUX[i] = Math.min(65535, (AUX[i] | 0) + add) as any;
         }
         if ((AUX[i] | 0) >= LAVA_SOLIDIFY_ENERGY) {
@@ -340,11 +442,15 @@ export function applyThermal(engine: Engine, write: GridView) {
       // --- Ice neighborhood cooling ---
       if (id === ICE) {
         // gentle local cooling; clamp to avoid driving neighbors extremely cold
-        for (const j of n) T[j] = Math.max(-40, T[j] - 0.8);
+        for (const j of n)
+          T[j] = Math.max(
+            ICE_NEIGHBOR_COOL_CLAMP_MIN_C,
+            T[j] - ICE_NEIGHBOR_COOL_DELTA_C
+          );
       }
 
       // --- Rubber pops to smoke ---
-      if (id === RUBBER && T[i] >= 260) {
+      if (id === RUBBER && T[i] >= RUBBER_POP_TEMP_C) {
         const smokeId = getMaterialIdByName("Smoke");
         if (smokeId) M[i] = smokeId;
       }
@@ -352,10 +458,10 @@ export function applyThermal(engine: Engine, write: GridView) {
       // --- Wood charring ---
       if (
         m?.name === "Wood" &&
-        T[i] > 220 &&
-        T[i] < (m.combustionTemp ?? 300)
+        T[i] > WOOD_CHARRING_MIN_TEMP_C &&
+        T[i] < (m.combustionTemp ?? WOOD_CHARRING_MAX_TEMP_C)
       ) {
-        if (engine.rand && engine.rand() < 0.001) {
+        if (engine.rand && engine.rand() < WOOD_CHARRING_PROB_PER_STEP) {
           const ashId = getMaterialIdByName("Ash");
           if (ashId) M[i] = ashId as any;
         }
@@ -363,7 +469,7 @@ export function applyThermal(engine: Engine, write: GridView) {
 
       // --- Foam decay ---
       if (m?.name === "Foam") {
-        if (engine.rand && engine.rand() < 0.0005) {
+        if (engine.rand && engine.rand() < FOAM_DECAY_PROB_PER_STEP) {
           M[i] = WATER;
           for (const j of n) {
             if (M[j] === 0) {
@@ -376,15 +482,15 @@ export function applyThermal(engine: Engine, write: GridView) {
       }
 
       // --- Humidity decay ---
-      if (HUM[i] > 0) HUM[i] = (HUM[i] - 1) as any;
+      if (HUM[i] > 0) HUM[i] = (HUM[i] - HUMIDITY_DECAY_PER_STEP) as any;
 
       // --- Water + Dust -> Mud ---
       if (m?.name === "Dust") {
         for (const j of n) {
           if (M[j] === WATER) {
-            if (engine.rand && engine.rand() < 0.1) {
+            if (engine.rand && engine.rand() < DUST_TO_MUD_PROB_PER_STEP) {
               M[i] = MUD;
-              HUM[i] = 200 as any;
+              HUM[i] = MUD_INITIAL_HUMIDITY as any;
               break;
             }
           }
@@ -394,14 +500,19 @@ export function applyThermal(engine: Engine, write: GridView) {
       // --- Mud dries to Sand ---
       if (id === MUD) {
         const nearWater = n.some((j) => M[j] === WATER);
-        if (!nearWater && HUM[i] < 40 && engine.rand && engine.rand() < 0.02) {
+        if (
+          !nearWater &&
+          HUM[i] < MUD_DRY_HUMIDITY_THRESHOLD &&
+          engine.rand &&
+          engine.rand() < MUD_DRY_PROB_PER_STEP
+        ) {
           M[i] = SAND;
         }
       }
 
       // --- Vitrification ---
-      if (m?.name === "Sand" && T[i] > 900) {
-        if (engine.rand && engine.rand() < 0.002) {
+      if (m?.name === "Sand" && T[i] > SAND_VITRIFY_TEMP_C) {
+        if (engine.rand && engine.rand() < SAND_VITRIFY_PROB_PER_STEP) {
           M[i] = GLASS;
         }
       }
@@ -416,17 +527,21 @@ export function applyThermal(engine: Engine, write: GridView) {
           if (smokeId) {
             M[i] = smokeId as any;
             // give cooled smoke a reasonable temperature band
-            T[i] = Math.max(80, Math.min(T[i], 220));
+            T[i] = Math.max(
+              SMOKE_TEMP_CLAMP_MIN_C,
+              Math.min(T[i], SMOKE_TEMP_CLAMP_MAX_C)
+            );
           }
         }
       }
       if (id === EMBER) {
         // deterministic ember lifetime using AUX as counter
-        const life = AUX[i] | 0 || 500;
+        const life = AUX[i] | 0 || EMBER_INITIAL_LIFE_STEPS;
         AUX[i] = (life - 1) as any;
         // maintain a warm floor, but slowly decay
-        T[i] = Math.max(T[i] - 0.5, 150);
-        for (const j of n) T[j] = Math.max(T[j], T[i] - 12);
+        T[i] = Math.max(T[i] - EMBER_COOL_DECAY_PER_STEP, EMBER_MIN_TEMP_C);
+        for (const j of n)
+          T[j] = Math.max(T[j], T[i] - EMBER_NEIGHBOR_WARM_DELTA_C);
         // Only reignite if there is nearby unburnt fuel
         let hasFuelNeighbor = false;
         for (const j of n) {
@@ -436,9 +551,9 @@ export function applyThermal(engine: Engine, write: GridView) {
             break;
           }
         }
-        if (hasFuelNeighbor && T[i] > 380) M[i] = FIRE;
+        if (hasFuelNeighbor && T[i] > EMBER_REIGNITE_TEMP_C) M[i] = FIRE;
         // convert to ash when life expires or cooled sufficiently
-        if ((AUX[i] | 0) <= 0 || T[i] < 140) {
+        if ((AUX[i] | 0) <= 0 || T[i] < EMBER_ASH_COOL_TEMP_C) {
           const ashId = getMaterialIdByName("Ash");
           if (ashId) M[i] = ashId as any;
         }

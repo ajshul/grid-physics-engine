@@ -2,7 +2,14 @@ import { createGrid, front, back, swap } from "./grid";
 import { mulberry32 } from "./rng";
 import { registry } from "./materials";
 import { createDefaultPipeline, PassPipeline } from "./pipeline";
-import { AMBIENT_TEMPERATURE_C } from "./constants";
+import {
+  AMBIENT_TEMPERATURE_C,
+  ICE_INIT_TEMP_BELOW_C,
+  ICE_NEIGHBOR_CHILL_TO_C,
+  LAVA_INIT_TEMP_C,
+  WATER_INIT_TEMP_C,
+  FIRE_INIT_TEMP_C,
+} from "./constants";
 
 export interface EngineOptions {
   w: number;
@@ -46,7 +53,7 @@ export class Engine {
         const mat = registry[materialId];
         if (mat?.name === "Ice") {
           // place ice slightly below freezing to avoid instant melt from ambient
-          g.temp[i] = Math.min(g.temp[i], -5);
+          g.temp[i] = Math.min(g.temp[i], ICE_INIT_TEMP_BELOW_C);
           // chill local area slightly
           for (let oy = -1; oy <= 1; oy++) {
             for (let ox = -1; ox <= 1; ox++) {
@@ -55,15 +62,15 @@ export class Engine {
               if (nx < 0 || ny < 0 || nx >= this.grid.w || ny >= this.grid.h)
                 continue;
               const ni = (ny * this.grid.w + nx) | 0;
-              g.temp[ni] = Math.min(g.temp[ni], 0);
+              g.temp[ni] = Math.min(g.temp[ni], ICE_NEIGHBOR_CHILL_TO_C);
             }
           }
         } else if (mat?.name === "Lava") {
-          g.temp[i] = Math.max(g.temp[i], 800);
+          g.temp[i] = Math.max(g.temp[i], LAVA_INIT_TEMP_C);
         } else if (mat?.name === "Water") {
-          g.temp[i] = Math.min(g.temp[i], 25);
+          g.temp[i] = Math.min(g.temp[i], WATER_INIT_TEMP_C);
         } else if (mat?.name === "Fire") {
-          g.temp[i] = Math.max(g.temp[i], 420);
+          g.temp[i] = Math.max(g.temp[i], FIRE_INIT_TEMP_C);
           // Tag origin for burnout byproducts if painting directly over fuel
           const prev = registry[prevId];
           if (prev?.name === "Oil") {

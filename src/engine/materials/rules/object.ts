@@ -4,6 +4,15 @@ import { registry } from "../index";
 import { BOMB, METEOR } from "../presets";
 import { CAT } from "../categories";
 import { getMaterialIdByName } from "../../utils";
+import {
+  BOMB_DEFAULT_FUSE_STEPS,
+  METEOR_HEAT_NEIGHBORS_AMOUNT,
+  BOMB_EXPLOSION_RADIUS,
+  EXPLOSION_HEAT_C,
+  IMPULSE_RADIAL_SCALE,
+  EXPLOSION_SHRAPNEL_CHANCE,
+  EXPLOSION_SHRAPNEL_MIN_RADIUS_FRAC,
+} from "../../constants";
 
 export function stepObjects(
   engine: Engine,
@@ -41,15 +50,15 @@ export function stepObjects(
       // simple behaviors
       if (id === BOMB) {
         // deterministic fuse in AUX
-        const fuse = (write.aux[i] || 180) - 1;
+        const fuse = (write.aux[i] || BOMB_DEFAULT_FUSE_STEPS) - 1;
         write.aux[i] = fuse;
         if (fuse <= 0) {
-          explode(engine, write, x, y, 8);
+          explode(engine, write, x, y, BOMB_EXPLOSION_RADIUS);
           continue;
         }
       } else if (id === METEOR) {
         // heat surroundings and attempt displacement through powder/liquid
-        heatNeighbors(engine, write, x, y, 2.0);
+        heatNeighbors(engine, write, x, y, METEOR_HEAT_NEIGHBORS_AMOUNT);
         const down = i + w;
         const mid = R[down];
         const mDown = registry[mid];
@@ -102,11 +111,18 @@ function explode(
       const i = py * w + px;
       M[i] = smokeId ?? 0;
       if (fireId && Math.hypot(dx, dy) < r * 0.6) M[i] = fireId;
-      T[i] = Math.max(T[i], 300);
+      T[i] = Math.max(T[i], EXPLOSION_HEAT_C);
       // radial impulse (separate from static pressure)
-      I[i] = Math.max(I[i], (r * 20 - (dx * dx + dy * dy)) | 0);
+      I[i] = Math.max(
+        I[i],
+        (r * IMPULSE_RADIAL_SCALE - (dx * dx + dy * dy)) | 0
+      );
       // occasional shrapnel turning nearby solids into rubble
-      if (rubbleId && Math.hypot(dx, dy) > r * 0.5 && engine.rand() < 0.05) {
+      if (
+        rubbleId &&
+        Math.hypot(dx, dy) > r * EXPLOSION_SHRAPNEL_MIN_RADIUS_FRAC &&
+        engine.rand() < EXPLOSION_SHRAPNEL_CHANCE
+      ) {
         const mid = M[i];
         if (registry[mid]?.category === CAT.SOLID) M[i] = rubbleId;
       }

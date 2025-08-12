@@ -2,6 +2,30 @@ import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { CAT } from "../categories";
+import {
+  BUOYANCY_TEMP_BASE_C,
+  BUOYANCY_TEMP_DIVISOR,
+  BUOYANCY_MAX_BOOST,
+  BUBBLE_SWAP_BASE,
+  BUBBLE_SWAP_BUOYANCY_FACTOR,
+  HOT_BOOST_START_C,
+  HOT_BOOST_DIVISOR,
+  HOT_BOOST_MAX,
+  GAS_UPWARD_BASE,
+  GAS_UPWARD_BUOYANCY_FACTOR,
+  GAS_UPWARD_MAX,
+  GAS_DIAGONAL_SLIP_BASE,
+  GAS_DIAGONAL_SLIP_BOOST,
+  GAS_LATERAL_BIAS_TEMP_C,
+  GAS_LATERAL_BIAS_RIGHT,
+  GAS_LATERAL_BIAS_NEUTRAL,
+  SMOKE_DISSIPATION_BASE,
+  SMOKE_DISSIPATION_PRESSURE_BONUS_MAX,
+  SMOKE_DISSIPATION_PRESSURE_DIVISOR,
+  VENTING_PRESSURE_DIFF_THRESHOLD,
+  VENTING_CHANCE_BASE,
+  VENTING_CHANCE_BUOYANCY_FACTOR,
+} from "../../constants";
 
 export function stepGas(
   engine: Engine,
@@ -17,7 +41,6 @@ export function stepGas(
   const VX = write.velX;
   const VY = write.velY;
   const I = write.impulse;
-  const AUX = write.aux;
   const canWrite = (idx: number): boolean => W[idx] === R[idx];
   for (let y = 1; y < h - 1; y++) {
     const dir = (y & 1) === 0 ? 1 : -1;
@@ -27,10 +50,13 @@ export function stepGas(
       const m = registry[id];
       if (!m || m.category !== "gas") continue;
       const up = i - w;
-      const neighbors = [i - 1, i + 1, i - w, i + w];
-      const nearIce = neighbors.some((j) => registry[R[j]]?.name === "Ice");
+      // const neighbors = [i - 1, i + 1, i - w, i + w];
+      // const nearIce = neighbors.some((j) => registry[R[j]]?.name === "Ice");
       // temperature-coupled buoyancy: hotter gas is more eager to rise
-      const buoyancyBoost = Math.min(2, Math.max(0, (T[i] - 100) / 100));
+      const buoyancyBoost = Math.min(
+        BUOYANCY_MAX_BOOST,
+        Math.max(0, (T[i] - BUOYANCY_TEMP_BASE_C) / BUOYANCY_TEMP_DIVISOR)
+      );
       // bubble swap: gas under liquid can swap to rise and release trapped water; hotter steam more likely
       if (
         (W[i] === 0 || registry[W[i]]?.category === CAT.GAS) &&
@@ -39,8 +65,16 @@ export function stepGas(
         canWrite(i) &&
         canWrite(up)
       ) {
-        const hotBoost = Math.min(0.5, Math.max(0, (T[i] - 100) / 150));
-        if (rand() < 0.25 + 0.12 * buoyancyBoost + hotBoost) {
+        const hotBoost = Math.min(
+          HOT_BOOST_MAX,
+          Math.max(0, (T[i] - HOT_BOOST_START_C) / HOT_BOOST_DIVISOR)
+        );
+        if (
+          rand() <
+          BUBBLE_SWAP_BASE +
+            BUBBLE_SWAP_BUOYANCY_FACTOR * buoyancyBoost +
+            hotBoost
+        ) {
           const liquidAbove = R[up];
           W[i] = liquidAbove;
           W[up] = id;
@@ -66,8 +100,9 @@ export function stepGas(
           engine.markDirty(x, y - 1);
           continue;
         }
-        const pUp = 0.3 + 0.15 * buoyancyBoost;
-        if (rand() < Math.min(0.9, pUp)) {
+        const pUp =
+          GAS_UPWARD_BASE + GAS_UPWARD_BUOYANCY_FACTOR * buoyancyBoost;
+        if (rand() < Math.min(GAS_UPWARD_MAX, pUp)) {
           W[i] = 0;
           W[up] = id;
           VY[up] = -1;
@@ -84,7 +119,8 @@ export function stepGas(
         (W[ul] === 0 || registry[W[ul]]?.category === CAT.GAS) &&
         canWrite(i) &&
         canWrite(ul) &&
-        rand() < 0.5 + 0.2 * buoyancyBoost
+        rand() <
+          GAS_DIAGONAL_SLIP_BASE + GAS_DIAGONAL_SLIP_BOOST * buoyancyBoost
       ) {
         W[i] = 0;
         W[ul] = id;
@@ -97,7 +133,8 @@ export function stepGas(
         (W[ur] === 0 || registry[W[ur]]?.category === CAT.GAS) &&
         canWrite(i) &&
         canWrite(ur) &&
-        rand() < 0.5 + 0.2 * buoyancyBoost
+        rand() <
+          GAS_DIAGONAL_SLIP_BASE + GAS_DIAGONAL_SLIP_BOOST * buoyancyBoost
       ) {
         W[i] = 0;
         W[ur] = id;
@@ -105,7 +142,10 @@ export function stepGas(
         continue;
       }
       // temperature-weighted lateral diffusion (reduced/disabled for steam to favor vertical rise)
-      const biasRight = T[i] > 110 ? 0.6 : 0.5;
+      const biasRight =
+        T[i] > GAS_LATERAL_BIAS_TEMP_C
+          ? GAS_LATERAL_BIAS_RIGHT
+          : GAS_LATERAL_BIAS_NEUTRAL;
       const j = rand() < biasRight ? i + 1 : i - 1;
       const allowLateral = m.name === "Steam" ? false : true;
       if (
@@ -124,8 +164,11 @@ export function stepGas(
       // smoke dissipation slightly stronger when enclosed (higher pressure magnitude)
       if (m.name === "Smoke") {
         const pressureMagnitude = Math.abs((P[i] | 0) + (I[i] | 0));
-        const base = 0.015;
-        const bonus = Math.min(0.03, pressureMagnitude / 4000);
+        const base = SMOKE_DISSIPATION_BASE;
+        const bonus = Math.min(
+          SMOKE_DISSIPATION_PRESSURE_BONUS_MAX,
+          pressureMagnitude / SMOKE_DISSIPATION_PRESSURE_DIVISOR
+        );
         if (rand() < base + bonus) {
           W[i] = 0;
         }
@@ -139,10 +182,12 @@ export function stepGas(
         m.name !== "Steam" &&
         R[left] === 0 &&
         (W[left] === 0 || registry[W[left]]?.category === CAT.GAS) &&
-        pHere - (((P[left] | 0) + (I[left] | 0)) | 0) > 2 &&
+        pHere - (((P[left] | 0) + (I[left] | 0)) | 0) >
+          VENTING_PRESSURE_DIFF_THRESHOLD &&
         canWrite(i) &&
         canWrite(left) &&
-        rand() < 0.1 + 0.05 * buoyancyBoost
+        rand() <
+          VENTING_CHANCE_BASE + VENTING_CHANCE_BUOYANCY_FACTOR * buoyancyBoost
       ) {
         W[i] = 0;
         W[left] = id;
@@ -151,10 +196,12 @@ export function stepGas(
         m.name !== "Steam" &&
         R[right] === 0 &&
         (W[right] === 0 || registry[W[right]]?.category === CAT.GAS) &&
-        pHere - (((P[right] | 0) + (I[right] | 0)) | 0) > 2 &&
+        pHere - (((P[right] | 0) + (I[right] | 0)) | 0) >
+          VENTING_PRESSURE_DIFF_THRESHOLD &&
         canWrite(i) &&
         canWrite(right) &&
-        rand() < 0.1 + 0.05 * buoyancyBoost
+        rand() <
+          VENTING_CHANCE_BASE + VENTING_CHANCE_BUOYANCY_FACTOR * buoyancyBoost
       ) {
         W[i] = 0;
         W[right] = id;

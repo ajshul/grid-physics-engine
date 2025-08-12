@@ -1,6 +1,13 @@
 import type { Engine } from "../engine";
 import type { GridView } from "../grid";
 import { registry } from "../materials";
+import {
+  ACID_ETCHANT_BUDGET_THRESHOLD,
+  ACID_ETCHANT_GAIN_PER_60HZ,
+  ACID_EXOTHERM_HEAT_C,
+  ACID_HUMIDITY_INCREASE,
+  ACID_SMOKE_EMIT_CONVERSIONS,
+} from "../constants";
 
 export function applyAcidEtching(
   engine: Engine,
@@ -21,7 +28,7 @@ export function applyAcidEtching(
   if (!acidId || !rubbleId) return;
 
   const dt = engine.dt;
-  const BUDGET_THRESHOLD = 100; // etch budget required
+  const BUDGET_THRESHOLD = ACID_ETCHANT_BUDGET_THRESHOLD; // etch budget required
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -41,17 +48,20 @@ export function applyAcidEtching(
           const localTemp = T[i];
           const heatFactor = 1 + Math.max(0, (localTemp - 20) / 200);
           // per-step budget gain; dt-scaled and clamped
-          const gain = Math.max(1, (8 * heatFactor * dt * 60) | 0);
+          const gain = Math.max(
+            1,
+            (ACID_ETCHANT_GAIN_PER_60HZ * heatFactor * dt * 60) | 0
+          );
           const b = Math.min(65535, (AUX[j] | 0) + gain);
           AUX[j] = b as any;
           if (b >= BUDGET_THRESHOLD && canWrite(j)) {
             W[j] = rubbleId;
             AUX[j] = 0 as any;
-            T[j] += 5; // exothermic heat
+            T[j] += ACID_EXOTHERM_HEAT_C; // exothermic heat
             conversionsThisCell++;
             engine.markDirty(j % w | 0, (j / w) | 0);
             // increase local humidity from acid exposure
-            HUM[j] = Math.min(255, HUM[j] + 30);
+            HUM[j] = Math.min(255, HUM[j] + ACID_HUMIDITY_INCREASE);
           }
         }
       }
@@ -59,7 +69,7 @@ export function applyAcidEtching(
       if (conversionsThisCell > 0 && smokeId && canWrite(i)) {
         const count = (AUX[i] | 0) + conversionsThisCell;
         AUX[i] = count as any;
-        if (count >= 3) {
+        if (count >= ACID_SMOKE_EMIT_CONVERSIONS) {
           W[i] = smokeId;
           AUX[i] = 0 as any;
         }

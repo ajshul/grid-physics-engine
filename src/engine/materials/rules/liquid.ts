@@ -3,6 +3,21 @@ import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { CAT } from "../categories";
 import { LAVA, STEAM, WATER, STONE, FIRE } from "../presets";
+import {
+  HUMIDITY_FROM_WATER_PER_STEP,
+  HUMIDITY_FROM_FOAM_PER_STEP,
+  HUMIDITY_FROM_ACID_PER_STEP,
+  LAVA_PREHEAT_NEIGHBOR_TARGET_MAX_C,
+  LAVA_PREHEAT_NEIGHBOR_OFFSET_C,
+  WATER_LAVA_REACT_WATER_TEMP_C,
+  WATER_LAVA_REACT_LAVA_TEMP_C,
+  WATER_LAVA_REACTION_IMPULSE_RADIUS,
+  REACTION_IMPULSE_RADIAL_SCALE,
+  WATER_NEAR_BOIL_HOLD_DELTA_C,
+  IMMISCIBILITY_DENSITY_DELTA_THRESHOLD,
+  WATER_MOVE_INTO_HOT_GAS_COOL_DELTA_C,
+  WATER_MOVE_COOL_MIN_TEMP_C,
+} from "../../constants";
 
 export function stepLiquid(
   engine: Engine,
@@ -28,7 +43,12 @@ export function stepLiquid(
 
       // humidity coupling: water/foam/acid wet neighboring cells (apply regardless of movement)
       if (id === WATER || m.name === "Foam" || m.name === "Acid") {
-        const add = id === WATER ? 12 : m.name === "Foam" ? 8 : 10;
+        const add =
+          id === WATER
+            ? HUMIDITY_FROM_WATER_PER_STEP
+            : m.name === "Foam"
+            ? HUMIDITY_FROM_FOAM_PER_STEP
+            : HUMIDITY_FROM_ACID_PER_STEP;
         const n = [i, i - 1, i + 1, i - w, i + w];
         for (const j of n) HUM[j] = Math.min(255, (HUM[j] | 0) + add) as any;
       }
@@ -38,7 +58,10 @@ export function stepLiquid(
         const neigh = [i - 1, i + 1, i - w, i + w];
         for (const j of neigh) {
           // raise neighbor temperature toward a hot target to ensure ignition without instant stone coating
-          const target = Math.min(450, (T[i] | 0) - 200);
+          const target = Math.min(
+            LAVA_PREHEAT_NEIGHBOR_TARGET_MAX_C,
+            (T[i] | 0) - LAVA_PREHEAT_NEIGHBOR_OFFSET_C
+          );
           if (target > (T[j] | 0)) T[j] = target;
           // direct contact ignition for flammables (oil, wood) — immediate and deterministic
           const mid = R[j];
@@ -69,8 +92,10 @@ export function stepLiquid(
         // require some heating before instant vitrification: avoid instant coat
         const waterOnTop = id === WATER && R[below] === LAVA;
         const hotEnough = waterOnTop
-          ? T[i] > 80 || T[below] > 500
-          : T[below] > 80 || T[i] > 500;
+          ? T[i] > WATER_LAVA_REACT_WATER_TEMP_C ||
+            T[below] > WATER_LAVA_REACT_LAVA_TEMP_C
+          : T[below] > WATER_LAVA_REACT_WATER_TEMP_C ||
+            T[i] > WATER_LAVA_REACT_LAVA_TEMP_C;
         if (!hotEnough) {
           // just exchange a bit of heat and skip reaction this frame
           T[i] = Math.max(T[i], 60);
@@ -84,7 +109,7 @@ export function stepLiquid(
           T[i] = Math.max(T[i], 200);
           T[below] = Math.max(T[below], 200);
           // small outward gas push via impulse buffer
-          const r = 2;
+          const r = WATER_LAVA_REACTION_IMPULSE_RADIUS;
           for (let dy = -r; dy <= r; dy++) {
             for (let dx = -r; dx <= r; dx++) {
               if (dx * dx + dy * dy > r * r) continue;
@@ -92,7 +117,10 @@ export function stepLiquid(
               const py = y + dy;
               if (px < 1 || py < 1 || px >= w - 1 || py >= h - 1) continue;
               const k = py * w + px;
-              I[k] = Math.max(I[k], (r * 4 - (dx * dx + dy * dy)) | 0);
+              I[k] = Math.max(
+                I[k],
+                (r * REACTION_IMPULSE_RADIAL_SCALE - (dx * dx + dy * dy)) | 0
+              );
             }
           }
           engine.markDirty(x, y);
@@ -107,7 +135,8 @@ export function stepLiquid(
       // const right = i + 1;
       // const up = i - w;
       const baseBp = registry[WATER]?.boilingPoint ?? 100;
-      const hotNucleating = id === WATER && T[i] >= baseBp - 5;
+      const hotNucleating =
+        id === WATER && T[i] >= baseBp - WATER_NEAR_BOIL_HOLD_DELTA_C;
       const sticky = m.name === "Foam" || m.name === "Acid";
       if (sticky || hotNucleating) {
         // Skip motion for this cell this frame
@@ -126,7 +155,9 @@ export function stepLiquid(
           (belowMat.immiscibleWith && belowMat.immiscibleWith.includes(m.name));
         const densDelta = (m.density ?? 0) - (belowMat.density ?? 0);
         if (
-          (!imm || densDelta > 1.5 || rand() < 0.2) &&
+          (!imm ||
+            densDelta > IMMISCIBILITY_DENSITY_DELTA_THRESHOLD ||
+            rand() < 0.2) &&
           canWrite(i) &&
           canWrite(below)
         ) {
@@ -148,7 +179,9 @@ export function stepLiquid(
           (aboveMat.immiscibleWith && aboveMat.immiscibleWith.includes(m.name));
         const densDelta = (aboveMat.density ?? 0) - (m.density ?? 0);
         if (
-          (!imm || densDelta > 1.5 || rand() < 0.2) &&
+          (!imm ||
+            densDelta > IMMISCIBILITY_DENSITY_DELTA_THRESHOLD ||
+            rand() < 0.2) &&
           canWrite(i) &&
           canWrite(above)
         ) {
@@ -244,8 +277,11 @@ export function stepLiquid(
           W[i] = 0;
           W[target] = id;
           // if moving water into hot gas region, apply cooling to prevent persistent steam traps
-          if (id === WATER && T[target] > 50)
-            T[target] = Math.max(20, T[target] - 2);
+          if (id === WATER && T[target] > WATER_MOVE_COOL_MIN_TEMP_C)
+            T[target] = Math.max(
+              20,
+              T[target] - WATER_MOVE_INTO_HOT_GAS_COOL_DELTA_C
+            );
           engine.markDirty(x, y);
           engine.markDirty(x + bestDx, y);
         }

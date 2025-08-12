@@ -2,6 +2,13 @@ import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { CAT } from "../categories";
+import {
+  MUD_WETTING_TRANSFER_PER_STEP_MAX,
+  DUST_WETTING_AUX_THRESHOLD,
+  MUD_WET_HUMIDITY_AFTER_CONVERT,
+  WET_SLIP_REDUCTION,
+  WIND_NUDGE_PER_AXIS,
+} from "../../constants";
 
 export function stepPowder(
   engine: Engine,
@@ -30,7 +37,7 @@ export function stepPowder(
         const below = i + w;
         if (matR[below] !== 0 && registry[matR[below]]?.name === "Dust") {
           // transfer humidity budget and slowly convert when sufficiently wet
-          const transfer = Math.min(6, HUM[i]);
+          const transfer = Math.min(MUD_WETTING_TRANSFER_PER_STEP_MAX, HUM[i]);
           if (transfer > 0) {
             HUM[i] = (HUM[i] - transfer) as any;
             HUM[below] = Math.min(255, (HUM[below] | 0) + transfer) as any;
@@ -39,13 +46,19 @@ export function stepPowder(
               65535,
               (AUX[below] | 0) + (transfer >> 1)
             ) as any;
-            if ((AUX[below] | 0) > 120 && canWrite(below)) {
+            if (
+              (AUX[below] | 0) > DUST_WETTING_AUX_THRESHOLD &&
+              canWrite(below)
+            ) {
               // convert to Mud by material id lookup
               const mudId = Object.keys(registry).find(
                 (k) => registry[+k]?.name === "Mud"
               );
               if (mudId) matW[below] = +mudId;
-              HUM[below] = Math.max(HUM[below], 160) as any;
+              HUM[below] = Math.max(
+                HUM[below],
+                MUD_WET_HUMIDITY_AFTER_CONVERT
+              ) as any;
               engine.markDirty(x, y + 1);
             }
           }
@@ -102,11 +115,11 @@ export function stepPowder(
       let windBoost = 0;
       const leftGas = registry[matR[i - 1]]?.category === CAT.GAS;
       const rightGas = registry[matR[i + 1]]?.category === CAT.GAS;
-      if (leftGas && VX[i - 1] < 0) windBoost += 0.1;
-      if (rightGas && VX[i + 1] > 0) windBoost += 0.1;
+      if (leftGas && VX[i - 1] < 0) windBoost += WIND_NUDGE_PER_AXIS;
+      if (rightGas && VX[i + 1] > 0) windBoost += WIND_NUDGE_PER_AXIS;
       const slip = Math.max(
         0,
-        Math.min(1, slipBase - 0.4 * localWet + windBoost)
+        Math.min(1, slipBase - WET_SLIP_REDUCTION * localWet + windBoost)
       );
       const tryL = below - 1;
       const tryR = below + 1;

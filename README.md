@@ -72,6 +72,7 @@ src/
 - Update order per frame (via PassPipeline): Pressure → Powder → Liquid → Gas → Energy → Objects → Chemistry → Thermal/Reactions
 - Pressure: static and impulse components; bottom-up accumulation for liquids, gradient for gases; blended for flow/venting
 - Thermal: antisymmetric, mass-aware conduction; additive ambient cooling; latent heat (ice↔water); boiling delayed under pressure; steam rises then condenses
+  - Empty space is strongly coupled to ambient to prevent residual heat; temperature overlay reflects current temperatures accurately
 - Reactions: water+lava→stone+steam (brief heat gating, then precedence); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets; lava preheats/ignites nearby oil/wood before it cools to stone
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
 
@@ -98,6 +99,7 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
   - Burning spreads emit small smoke puffs in nearby empty cells; embers warm neighbors, cool gradually, and only reignite if fuel is adjacent
   - Embers fall if unsupported (with occasional diagonal slip), can ignite dust they contact, may crumble to Ash while falling, and quench to Ash when touching Water
   - Mud wets Dust below over time by transferring humidity; sufficiently wet Dust converts to Mud
+  - Dust has a higher ignition temperature to avoid spurious ignition in recently cooled areas
 - Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C
 
 For a detailed first-principles specification, see `./Engine_Guide.md`.

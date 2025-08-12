@@ -60,6 +60,7 @@ export const DUST = define({
   density: 3.0,
   slip: 0.9,
   flammable: true,
+  combustionTemp: 380,
 });
 
 export const WATER = define({

@@ -171,7 +171,7 @@ export function applyThermal(engine: Engine, write: GridView) {
       let baseCoolingPerSec =
         category === "solid" ? 0.5 : category === "liquid" ? 0.7 : 0.5; // gases cool moderately
       // treat empty cells (air) as highly coupled to ambient to avoid heat lock-in
-      if (id === 0) baseCoolingPerSec = 5.0;
+      if (id === 0) baseCoolingPerSec = 6.0;
       // keep steam hot a bit longer to allow visible rise before condensing
       if (m?.name === "Steam") baseCoolingPerSec = 0.05;
       const highTemp = Math.max(0, T[i] - 150) / 600; // radiative tail

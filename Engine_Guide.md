@@ -88,7 +88,7 @@ Pairwise exchange with right/down neighbors per step to avoid double counting:
 
 - Category baselines (gases coolest faster than solids); high‑temperature radiative tail
 - Additive approach: `ΔT = (T_ambient − T) * rate_per_sec * dt / mass`
-- Empty cells cool quickly; Steam cools slowly (to rise first)
+- Empty cells cool very quickly (strong coupling to ambient) to avoid residual heat pockets; Steam cools slowly (to rise first)
 
 ### Latent Heat (ICE ↔ WATER)
 
@@ -138,6 +138,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 - Settle vertically into empty/gas; diagonal slip controlled by `slip`, humidity, and nearby gas “wind”
 - Displace lighter liquids when falling; write‑buffer checks prevent race conditions
 - Mud wets Dust beneath by transferring humidity; wetting accumulates in a budget and Dust converts to Mud once sufficiently wet
+- Dust ignition requires sufficiently high temperature (raised combustion threshold)
 
 ### Liquids (`rules/liquid.ts`)
 

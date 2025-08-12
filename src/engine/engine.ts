@@ -2,6 +2,7 @@ import { createGrid, front, back, swap } from "./grid";
 import { mulberry32 } from "./rng";
 import { registry } from "./materials";
 import { createDefaultPipeline, PassPipeline } from "./pipeline";
+import { Player } from "./player";
 import {
   AMBIENT_TEMPERATURE_C,
   ICE_INIT_TEMP_BELOW_C,
@@ -28,6 +29,7 @@ export class Engine {
   // Fixed simulation time step in seconds
   dt = 1 / 60;
   private pipeline: PassPipeline;
+  player: Player | null = null;
 
   constructor(opts: EngineOptions) {
     this.opts = opts;
@@ -118,7 +120,13 @@ export class Engine {
     // Run modular pass pipeline
     this.pipeline.run(this, gA, gB, r);
 
+    // Swap world buffers so front reflects latest state
     swap(this.grid);
+
+    // Update player after world state is finalized for this frame
+    if (this.player) {
+      this.player.step(this);
+    }
   }
 
   /** Clear both buffers to ambient/empty and mark all chunks dirty for redraw. */
@@ -146,6 +154,13 @@ export class Engine {
         this.dirty.add((cy << 16) | cx);
       }
     }
+  }
+
+  /** Spawn or respawn a player at given coordinates (in cell units). */
+  spawnPlayer(x: number, y: number): Player {
+    const p = new Player(x, y);
+    this.player = p;
+    return p;
   }
 }
 

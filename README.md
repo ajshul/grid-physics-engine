@@ -24,7 +24,7 @@ This README summarizes how to run the project, the architecture, materials and i
 - Sidebar: pick material, change brush size, adjust speed, pause/resume
 - Toggle overlays (temperature/pressure) in the sidebar
 
-Planned (not yet implemented; see TODO.md): temperature/pressure overlays, additional tools (line/rect/fill/eyedropper/fan/heater/cooler), inspector panel, save/load/undo.
+Planned (see TODO.md): additional tools (line/rect/fill/eyedropper/fan/heater/cooler), expanded inspector, save/load/undo.
 
 ## Project Structure
 
@@ -33,6 +33,8 @@ src/
   engine/
     engine.ts           # main step loop (double buffer, seeded RNG)
     grid.ts             # SoA buffers and helpers
+      constants.ts        # core tunables (ambient, conduction, latent heat, pressure)
+      utils.ts            # helpers (name lookup, neighbors, clamps)
     rng.ts              # mulberry32 deterministic RNG
     passes/
       pressure.ts       # compute pseudo-hydrostatic pressure for flows
@@ -69,6 +71,8 @@ src/
 - Thermal: antisymmetric, mass-aware conduction; additive ambient cooling; latent heat (ice↔water); boiling delayed under pressure; steam rises then condenses
 - Reactions: water+lava→stone+steam (heat-gated); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
+  
+Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressure decay/diffusion, impulse blend) live in `src/engine/constants.ts`.
 
 ## Materials (Selected)
 

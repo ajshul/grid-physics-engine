@@ -64,7 +64,8 @@ Two components: static and impulse.
 - Decay: static decays slowly, impulse decays faster (dt‑scaled). Both step toward zero to remove residual noise.
 - Accumulation: bottom‑up hydrostatic accumulation for liquids; top‑down gradient for gases.
 - Diffusion: light blending to remove spikes (single pass).
-- Blending: the final `pressure` used by fluids is `static + k*impulse` (k≈0.6), so shocks persist briefly.
+- Blending: the final `pressure` used by fluids is `static + k*impulse` (k≈0.6 by default), so shocks persist briefly.
+  - Tunables for decay, diffusion, and blend live in `src/engine/constants.ts`.
 
 Usage:
 
@@ -79,7 +80,7 @@ Usage:
 
 Pairwise exchange with right/down neighbors per step to avoid double counting:
 
-- Effective conductivity: mean of neighbor conductivities, scaled by `CONDUCTION_SCALE * dt`
+- Effective conductivity: mean of neighbor conductivities, scaled by `CONDUCTION_SCALE * dt` (see `constants.ts`)
 - Thermal mass: `heatCapacity * density` (bounded below)
 - Heat flow `Q = (Tj - Ti) * k_eff`; updates are `+Q/mass_i` and `-Q/mass_j` (strictly antisymmetric)
 
@@ -98,6 +99,7 @@ Pairwise exchange with right/down neighbors per step to avoid double counting:
 
 - Boiling point raises gently with pressure: `bp ≈ 100 + 0.8*sqrt(max(0,P))`
 - Overheat energy accumulates into `aux` (dt‑scaled). When threshold reached, convert to STEAM and carry over any leftover energy
+  - The latent fusion budget and per‑step cap constants are defined in `constants.ts`.
 
 ### Steam Condensation
 
@@ -142,7 +144,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 - Downward flow if empty/gas below; diagonal downhill based on local pressure stack and parity to avoid bias
 - Lateral flow guided by pressure gradient; viscosity limits spread per frame
 - Humidity: WATER/FOAM/ACID wet neighbors, affecting powders and fire suppression
-- Reaction (Water + Lava → Stone + Steam) requires sufficient heat to avoid instant stone coating; injects a small pressure impulse when it reacts
+- Reaction (Water + Lava → Stone + Steam) requires sufficient heat to avoid instant stone coating; injects a small pressure impulse when it reacts (reaction gating and handling centralized in the liquid pass)
 
 ### Gases (`rules/gas.ts`)
 
@@ -218,9 +220,9 @@ All tests should pass deterministically under the default `dt`.
 
 ## Known Tunables
 
-- `CONDUCTION_SCALE`, ambient cooling baselines, steam cooling rate and condensation thresholds
-- Pressure decay/diffusion constants and impulse blend factor
+- `CONDUCTION_SCALE` (see `constants.ts`), ambient cooling baselines, steam cooling rate and condensation thresholds
+- Pressure decay/diffusion constants and impulse blend factor (see `constants.ts`)
 - Liquid slope bias and spread; gas buoyancy and rise probabilities
 - Foam suppression strictness; ember burnout timing; acid etch budget/threshold
 
-All constants live near their usage sites and are documented with comments.
+Most core constants live in `src/engine/constants.ts`; remaining local tunables are documented near their usage.

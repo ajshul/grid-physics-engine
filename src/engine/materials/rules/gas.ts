@@ -26,6 +26,23 @@ export function stepGas(
       const up = i - w;
       // temperature-coupled buoyancy: hotter gas is more eager to rise
       const buoyancyBoost = Math.min(2, Math.max(0, (T[i] - 100) / 100));
+      // bubble swap: gas under liquid can swap to rise and release trapped water
+      if (
+        (W[i] === 0 || registry[W[i]]?.category === CAT.GAS) &&
+        registry[R[up]]?.category === CAT.LIQUID &&
+        (W[up] === R[up] || W[up] === 0)
+      ) {
+        if (rand() < 0.2 + 0.1 * buoyancyBoost) {
+          const liquidAbove = R[up];
+          W[i] = liquidAbove;
+          W[up] = id;
+          VY[up] = -1;
+          engine.markDirty(x, y);
+          engine.markDirty(x, y - 1);
+          continue;
+        }
+      }
+
       if (
         (R[up] === 0 || registry[R[up]]?.category === CAT.GAS) &&
         (W[up] === 0 || registry[W[up]]?.category === CAT.GAS)

@@ -45,8 +45,16 @@ export function stepPowder(
         belowMat.category === CAT.LIQUID &&
         (belowMat.density ?? 0) < (m.density ?? 0)
       ) {
-        // respect write occupancy
-        if (matW[below] === 0 || registry[matW[below]]?.category === CAT.GAS) {
+        // allow swap if target write cell still holds original liquid (no prior write)
+        const wBelow = matW[below];
+        const wBelowMat = registry[wBelow];
+        const canSwap =
+          (wBelow === belowId &&
+            wBelowMat &&
+            wBelowMat.category === CAT.LIQUID) ||
+          wBelow === 0 ||
+          registry[wBelow]?.category === CAT.GAS;
+        if (canSwap) {
           matW[i] = belowId;
           matW[below] = id;
           VY[below] = 1;

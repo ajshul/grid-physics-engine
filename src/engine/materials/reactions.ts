@@ -35,7 +35,28 @@ export function applyThermal(engine: Engine, write: GridView) {
       avg /= 5;
       const k = clamp01(m.conductivity ?? 0.2);
       // higher conductivity -> more equalization per step
-      T[i] = T[i] * (1 - k * 0.4) + avg * (k * 0.4);
+      T[i] = T[i] * (1 - k * 0.35) + avg * (k * 0.35);
+
+      // ambient cooling: exponential decay toward ambient 20 C
+      const ambient = 20;
+      // water and ice accelerate cooling; foam slightly too
+      const matName = m.name;
+      const coolantBoost =
+        matName === "Water"
+          ? 0.015
+          : matName === "Ice"
+          ? 0.03
+          : matName === "Foam"
+          ? 0.008
+          : 0;
+      // base cooling
+      let cooling = 0.995 - coolantBoost;
+      if (cooling < 0.97) cooling = 0.97;
+      // higher temps radiate faster: additional temp-dependent loss
+      const highTemp = Math.max(0, T[i] - 200) / 800; // 0..~1
+      cooling -= highTemp * 0.01;
+      if (cooling < 0.95) cooling = 0.95;
+      T[i] = ambient + (T[i] - ambient) * cooling;
 
       // phase changes
       if (id === ICE && T[i] >= (m.meltingPoint ?? 0)) {
@@ -46,10 +67,23 @@ export function applyThermal(engine: Engine, write: GridView) {
         const bp = m.boilingPoint ?? 100;
         if (T[i] <= fp - 5) M[i] = ICE; // stronger hysteresis
         else if (T[i] >= bp + 10) M[i] = STEAM;
+        // water absorbs heat and cools neighbors slightly
+        for (const j of n) T[j] = Math.max(ambient, T[j] - 0.5);
       }
       if (id === STEAM) {
         // condense when cooled
         if (T[i] < 85) M[i] = WATER;
+        // near cooler surfaces condense faster (ice or cold solids)
+        const n2 = [i - 1, i + 1, i - w, i + w];
+        let nearCool = false;
+        for (const j of n2) {
+          const mj = registry[M[j]];
+          if (!mj) continue;
+          if (mj.name === "Ice" || (mj.category === "solid" && T[j] < 30)) {
+            nearCool = true;
+          }
+        }
+        if (nearCool && T[i] < 95) M[i] = WATER;
       }
 
       // flammability
@@ -66,14 +100,22 @@ export function applyThermal(engine: Engine, write: GridView) {
       if (id === LAVA) {
         // keep lava hot
         if (T[i] < 600) T[i] = 600;
-        // slow cool
-        T[i] *= 0.995;
+        // lava still cools but remains high until solidifying
+        T[i] = ambient + (T[i] - ambient) * 0.999;
         if (T[i] < 200) {
           // turn to stone
           const stoneId = Object.keys(registry).find(
             (k) => registry[+k]?.name === "Stone"
           );
           if (stoneId) M[i] = +stoneId;
+        }
+      }
+
+      if (id === ICE) {
+        // ice cools neighbors and slowly melts when warm enough
+        for (const j of n) T[j] = Math.max(ambient, T[j] - 1.5);
+        if (T[i] >= (m.meltingPoint ?? 0) + 2) {
+          M[i] = WATER;
         }
       }
 

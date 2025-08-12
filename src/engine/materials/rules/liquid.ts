@@ -27,6 +27,39 @@ export function stepLiquid(
       const belowMat = registry[R[below]];
       const aboveMat = registry[R[above]];
 
+      // immediate reaction: water + lava -> stone + steam (pre-move)
+      if (
+        (id === WATER && R[below] === LAVA) ||
+        (id === LAVA && R[below] === WATER)
+      ) {
+        const stoneId = Object.keys(registry).find(
+          (k) => registry[+k]?.name === "Stone"
+        );
+        const steamId = STEAM;
+        if (stoneId) {
+          W[below] = +stoneId;
+          W[i] = steamId;
+          // heat burst
+          T[i] = Math.max(T[i], 200);
+          T[below] = Math.max(T[below], 200);
+          // small outward gas push via pressure impulse
+          const r = 2;
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              if (dx * dx + dy * dy > r * r) continue;
+              const px = x + dx;
+              const py = y + dy;
+              if (px < 1 || py < 1 || px >= w - 1 || py >= h - 1) continue;
+              const k = py * w + px;
+              P[k] = Math.max(P[k], (r * 4 - (dx * dx + dy * dy)) | 0);
+            }
+          }
+        }
+        engine.markDirty(x, y);
+        engine.markDirty(x, y + 1);
+        continue;
+      }
+
       // buoyancy exchange between liquids based on density
       if (
         belowMat &&

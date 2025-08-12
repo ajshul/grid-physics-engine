@@ -23,8 +23,14 @@ This README summarizes how to run the project, the architecture, materials and i
 ## Controls
 
 - Left click: paint with the selected material
-- Sidebar: pick material, change brush size, adjust speed, pause/resume
-- Toggle overlays (temperature/pressure) in the sidebar
+- Sidebar:
+  - Brush: set brush radius with the slider
+  - Speed: simulation speed multiplier
+  - Pause/Resume: toggle simulation
+  - Step: advance one frame (when paused)
+  - Clear: reset the world to ambient
+  - Overlay: None / Temperature / Pressure
+  - CRT: enable/disable scanline overlay
 
 Planned (see TODO.md): additional tools (line/rect/fill/eyedropper/fan/heater/cooler), expanded inspector, save/load/undo.
 
@@ -60,8 +66,8 @@ src/
   state/
     useStore.ts         # Zustand UI store
   ui/
-    CanvasView.tsx      # canvas + input interaction
-    Palette.tsx         # material selection grid + overlay toggle + inspector
+     CanvasView.tsx      # canvas + input interaction + CRT wrapper
+     Palette.tsx         # material selection grid + overlay toggle + compact inspector
    tests/
      *.test.ts           # determinism, first-principles physics, pressure, overlays, humidity, category rules
 ```
@@ -102,15 +108,15 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
   - Dust has a higher ignition temperature to avoid spurious ignition in recently cooled areas
 - Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C
 
- For a detailed first-principles specification, see `./Engine_Guide.md`.
+For a detailed first-principles specification, see `./Engine_Guide.md`.
 
- ### Test Coverage (Added)
+### Test Coverage (Added)
 
- - Pressure model: hydrostatic gradient behavior, impulse blending/decay, diffusion and venting
- - Painting semantics: temperature presets and buffer resets
- - Humidity: wetting from Water/Foam/Acid and Mud→Dust transfer
- - Gas/liquid bubble swap: hot gas releases under a sticky phase
- - Overlay consistency: temperature/pressure fields evolve near activity
+- Pressure model: hydrostatic gradient behavior, impulse blending/decay, diffusion and venting
+- Painting semantics: temperature presets and buffer resets
+- Humidity: wetting from Water/Foam/Acid and Mud→Dust transfer
+- Gas/liquid bubble swap: hot gas releases under a sticky phase
+- Overlay consistency: temperature/pressure fields evolve near activity
 
 ## Determinism and Performance
 

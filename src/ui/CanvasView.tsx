@@ -13,6 +13,8 @@ export default function CanvasView() {
     const H = 200; // tune
     const engine = new Engine({ w: W, h: H });
     engineRef.current = engine;
+    // expose engine in UI store for controls (clear, step, etc.)
+    useStore.setState({ engine });
     const cvs = canvasRef.current!;
     const ctx = cvs.getContext("2d")!;
     cvs.width = W;
@@ -96,10 +98,13 @@ export default function CanvasView() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="image-render-pixel"
-      style={{ width: "100%", height: "100%", display: "block" }}
-    />
+    <div className="crt">
+      <canvas
+        ref={canvasRef}
+        className="image-render-pixel game-canvas"
+        style={{ width: "100%", height: "100%", display: "block" }}
+      />
+      <div className="scanlines" />
+    </div>
   );
 }

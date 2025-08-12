@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Engine } from "../engine/engine";
 
 interface UIState {
   selected: number;
@@ -6,6 +7,8 @@ interface UIState {
   speed: number;
   paused: boolean;
   overlay: "none" | "temp" | "pressure";
+  engine: Engine | null;
+  showScanlines: boolean;
   hovered?: {
     x: number;
     y: number;
@@ -22,5 +25,7 @@ export const useStore = create<UIState>(() => ({
   speed: 1,
   paused: false,
   overlay: "none",
+  engine: null,
+  showScanlines: true,
   hovered: null,
 }));

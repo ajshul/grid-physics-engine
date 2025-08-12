@@ -2,6 +2,7 @@ import { createGrid, front, back, swap } from "./grid";
 import { mulberry32 } from "./rng";
 import { registry } from "./materials";
 import { createDefaultPipeline, PassPipeline } from "./pipeline";
+import { AMBIENT_TEMPERATURE_C } from "./constants";
 
 export interface EngineOptions {
   w: number;
@@ -103,6 +104,33 @@ export class Engine {
     this.pipeline.run(this, gA, gB, r);
 
     swap(this.grid);
+  }
+
+  /** Clear both buffers to ambient/empty and mark all chunks dirty for redraw. */
+  clear(): void {
+    const { w, h } = this.grid;
+    const views = [this.grid.a, this.grid.b];
+    for (const v of views) {
+      v.mat.fill(0);
+      v.temp.fill(AMBIENT_TEMPERATURE_C);
+      v.velX.fill(0);
+      v.velY.fill(0);
+      v.flags.fill(0);
+      v.pressure.fill(0);
+      v.impulse.fill(0);
+      v.aux.fill(0);
+      v.humidity.fill(0);
+      v.phase.fill(0);
+    }
+    // mark all chunks dirty so the next blit fully redraws
+    this.dirty.clear();
+    const chunksX = Math.ceil(w / this.chunkSize);
+    const chunksY = Math.ceil(h / this.chunkSize);
+    for (let cy = 0; cy < chunksY; cy++) {
+      for (let cx = 0; cx < chunksX; cx++) {
+        this.dirty.add((cy << 16) | cx);
+      }
+    }
   }
 }
 

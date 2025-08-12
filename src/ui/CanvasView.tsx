@@ -152,11 +152,12 @@ export default function CanvasView() {
     window.addEventListener("pointerup", up);
 
     // Keyboard controls
-    const key = (code: string): "left" | "right" | "jump" | null => {
+    const key = (code: string): "left" | "right" | "jump" | "down" | null => {
       if (code === "ArrowLeft" || code === "KeyA") return "left";
       if (code === "ArrowRight" || code === "KeyD") return "right";
       if (code === "ArrowUp" || code === "Space" || code === "KeyW")
         return "jump";
+      if (code === "ArrowDown" || code === "KeyS") return "down";
       return null;
     };
     const onKeyDown = (e: KeyboardEvent) => {

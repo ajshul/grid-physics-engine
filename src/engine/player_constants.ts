@@ -20,6 +20,8 @@ export const PLAYER_FOOT_OFFSET = 2; // from center y to bottom of sprite
 export const PLAYER_HEAD_OFFSET = 9; // from center y to top of sprite
 export const PLAYER_SNAP_EPS = 0.001;
 export const PLAYER_HEAD_CLEARANCE_EPS = 1.001;
+export const PLAYER_CROUCH_DROP_TIME = 0.12; // seconds required holding down to fall through
+export const PLAYER_CROUCH_DROP_COOLDOWN = 0.2; // seconds after dropping to avoid instant re-snap
 
 // Rubber bounce behavior
 export const RUBBER_BOUNCE_MIN_IMPACT = 8; // min magnitude to consider bounce

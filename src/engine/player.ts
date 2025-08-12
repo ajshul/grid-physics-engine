@@ -17,6 +17,8 @@ import {
   PLAYER_HEAD_CLEARANCE_EPS,
   PLAYER_BURN_DPS,
   PLAYER_CONTACT_DPS,
+  PLAYER_CROUCH_DROP_TIME,
+  PLAYER_CROUCH_DROP_COOLDOWN,
   RUBBER_BOUNCE_MIN_IMPACT,
   RUBBER_BOUNCE_MIN_VY,
   RUBBER_BOUNCE_FACTOR,
@@ -33,6 +35,7 @@ type PlayerInput = {
   left: boolean;
   right: boolean;
   jump: boolean;
+  down?: boolean;
 };
 
 export class Player {
@@ -45,7 +48,9 @@ export class Player {
   burning = false;
   spawnX: number;
   spawnY: number;
-  input: PlayerInput = { left: false, right: false, jump: false };
+  input: PlayerInput = { left: false, right: false, jump: false, down: false };
+  private downHold = 0;
+  private dropCooldown = 0;
 
   // Tunables (cells are pixels)
   private readonly moveSpeed = PLAYER_MOVE_SPEED;
@@ -85,6 +90,10 @@ export class Player {
     const grid = front(engine.grid);
     const { w, h } = engine.grid;
 
+    // update drop timers
+    if (this.input.down) this.downHold = Math.min(5, this.downHold + dt); else this.downHold = 0;
+    if (this.dropCooldown > 0) this.dropCooldown = Math.max(0, this.dropCooldown - dt);
+
     // Movement input → target velocity
     const want = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
     const targetVx = want * this.moveSpeed;
@@ -117,7 +126,10 @@ export class Player {
 
     // Integrate with simple discrete collision against blocking tiles
     const moveAxis = (dx: number, dy: number) => {
-      const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))));
+      const steps = Math.max(
+        1,
+        Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)))
+      );
       const sx = dx / steps;
       const sy = dy / steps;
       const halfW = PLAYER_HALF_WIDTH;
@@ -157,24 +169,36 @@ export class Player {
             const hitL = iL >= 0 && iL < w * h && this.isBlocking(grid.mat[iL]);
             const hitC = iC >= 0 && iC < w * h && this.isBlocking(grid.mat[iC]);
             const hitR = iR >= 0 && iR < w * h && this.isBlocking(grid.mat[iR]);
-            const liquidBelow = [iL, iC, iR].some(
-              (k) => k >= 0 && k < w * h && this.isLiquid(grid.mat[k])
-            );
-            if (hitL || hitC || hitR || liquidBelow) {
-            // snap to surface
-            this.y = tyBottom - footOffset - PLAYER_SNAP_EPS;
+            const liquidBelow = [iL, iC, iR].some((k) => k >= 0 && k < w * h && this.isLiquid(grid.mat[k]));
+            const powderBelow = [iL, iC, iR].some((k) => registry[grid.mat[k]]?.category === "powder");
+            const requestDrop = !!this.input.down && this.downHold >= PLAYER_CROUCH_DROP_TIME && this.dropCooldown <= 0;
+            const allowDrop = requestDrop && (powderBelow || liquidBelow);
+            if ((hitL || hitC || hitR || liquidBelow) && !allowDrop) {
+              // snap to surface
+              this.y = tyBottom - footOffset - PLAYER_SNAP_EPS;
               // rubber bounce
               const onRubber = [iL, iC, iR].some(
                 (k) => registry[grid.mat[k]]?.name === "Rubber"
               );
               if (onRubber) {
-                const speed = Math.max(RUBBER_BOUNCE_MIN_IMPACT, Math.abs(this.vy));
-                this.vy = -Math.max(RUBBER_BOUNCE_MIN_VY, speed * RUBBER_BOUNCE_FACTOR);
+                const speed = Math.max(
+                  RUBBER_BOUNCE_MIN_IMPACT,
+                  Math.abs(this.vy)
+                );
+                this.vy = -Math.max(
+                  RUBBER_BOUNCE_MIN_VY,
+                  speed * RUBBER_BOUNCE_FACTOR
+                );
                 this.onGround = false;
               } else {
                 this.vy = 0;
                 this.onGround = true;
               }
+            } else if (allowDrop) {
+              // pass down through and start a small cooldown to avoid re-snapping immediately
+              this.y = ny;
+              this.onGround = false;
+              this.dropCooldown = PLAYER_CROUCH_DROP_COOLDOWN;
             } else {
               this.y = ny;
               this.onGround = false;
@@ -265,7 +289,10 @@ export class Player {
       this.vy -= LIQUID_BUOYANCY_ACCEL * dt;
       const damp = Math.pow(WATER_DRAG, dt);
       this.vx *= damp;
-      if (this.input.jump && this.vy > -this.jumpSpeed * LIQUID_JUMP_BOOST_RATIO)
+      if (
+        this.input.jump &&
+        this.vy > -this.jumpSpeed * LIQUID_JUMP_BOOST_RATIO
+      )
         this.vy = -this.jumpSpeed * LIQUID_JUMP_BOOST_RATIO;
     }
   }

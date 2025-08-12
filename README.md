@@ -8,7 +8,7 @@ A modern, deterministic, and extensible 2D grid-based physics sandbox built with
 - Thermal conduction + phase changes + reactions (antisymmetric, mass-aware conduction; latent heat; vitrification)
 - Pressure field for liquid/gas guidance: persistent static field with decay/diffusion plus a separate transient impulse buffer (blended)
 - Modular pass pipeline and write-guards to avoid cross-pass clobbering
-- Fuel‑aware fire lifecycle (oil → smoke, wood → ember → ash), embers only reignite with nearby fuel; lava reliably ignites flammables before cooling to stone
+- Fuel‑aware fire lifecycle (default burnout → Smoke; oil → Smoke; wood → Ember → Ash), embers only reignite with nearby fuel; lava reliably ignites flammables before cooling to stone
 
 This README summarizes how to run the project, the architecture, materials and interactions, and how to extend it. For a deep-dive, see `./Engine_Guide.md`.
 
@@ -101,9 +101,11 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
 - Foam deterministically suppresses Fire and may decay into Water
 - Acid dissolves Stone/Wood/Glass into Rubble and emits heat + some Smoke
 - Rubber pops into Smoke at high temperature
-- Fuel‑aware fire burnout: burning oil tends to become Smoke; burning wood tends to become Ember (and can later ash)
+- Fuel‑aware fire: default burnout is Smoke unless wood‑origin; burning oil tends to become Smoke; burning wood burns longer and tends to leave Ember (and can later Ash)
+  - Water quenching: the water cell becomes Steam; the Fire cell becomes Ember if wood‑origin, otherwise Smoke
   - Burning spreads emit small smoke puffs in nearby empty cells; embers warm neighbors, cool gradually, and only reignite if fuel is adjacent
   - Embers fall if unsupported (with occasional diagonal slip), can ignite dust they contact, may crumble to Ash while falling, and quench to Ash when touching Water
+  - Origin tagging: when Fire is painted over Oil/Wood or ignites them, its origin is tagged; if missing, origin may be inferred from nearby fuel
   - Mud wets Dust below over time by transferring humidity; sufficiently wet Dust converts to Mud
   - Dust has a higher ignition temperature to avoid spurious ignition in recently cooled areas
 - Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C

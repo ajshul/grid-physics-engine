@@ -47,7 +47,7 @@ Double buffering (`a` and `b`) ensures “read front, write back, then swap” e
 3. Liquids (`materials/rules/liquid.ts`)
 4. Gases (`materials/rules/gas.ts`)
 5. Solids (mostly stationary)
-6. Energy (fire/ember) (`materials/rules/energy.ts`) — fuel‑aware ignition/burnout; origin tagging in `velX`
+6. Energy (fire/ember) (`materials/rules/energy.ts`) — fuel‑aware ignition/burnout; origin tagging in `velX` (oil vs wood) and inference from nearby fuel when missing
 7. Objects (bomb/meteor/ball) (`materials/rules/object.ts`)
 8. Chemistry pass (acid) (`passes/acid.ts`)
 9. Thermal/Phase/Reactions (`materials/reactions.ts`)
@@ -157,8 +157,8 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 ### Energy (`rules/energy.ts`)
 
-- Fire: heats neighbors and attempts ignition; lifetime deterministic and fuel‑aware (uses `aux` + origin tag in `velX`): oil → Smoke on burnout, wood → Ember (then cools and can ash). Fire emits small smoke puffs to nearby empty cells and cools locally on burnout to avoid immediate re‑ignition. Only reignites from Ember when adjacent fuel is present and hot.
-- Foam: deterministically quenches adjacent Fire by converting the fire cell to Foam; never converts Foam to Fire
+- Fire: heats neighbors and attempts ignition; lifetime deterministic and fuel‑aware (uses `aux` + origin tag in `velX`): default burnout → Smoke; oil → Smoke; wood burns longer and tends to → Ember (then can Ash). Fire emits small smoke puffs to nearby empty cells and cools locally on burnout to avoid immediate re‑ignition. Only reignites from Ember when adjacent fuel is present and hot.
+- Quenching: Water adjacent to Fire produces Steam on the water cell; the fire cell becomes Ember if wood‑origin, otherwise Smoke. Foam deterministically suppresses Fire (converts the fire cell to Foam) and does not ignite.
 - Oil: more easily ignited and propagates better along contiguous Oil
 - Dust flash: high local Dust density near Fire may flash to Smoke and emits a small impulse
 - Embers: fall if unsupported (with occasional diagonal slip), can ignite Dust on contact, may crumble to Ash during free fall, and quench to Ash when adjacent to Water

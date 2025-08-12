@@ -9,6 +9,7 @@ import { applyThermal } from "./materials/reactions";
 import { mulberry32 } from "./rng";
 import { computePressure } from "./passes/pressure";
 import { applyAcidEtching } from "./passes/acid";
+import { registry } from "./materials";
 
 export interface EngineOptions {
   w: number;
@@ -38,10 +39,31 @@ export class Engine {
         if (dx * dx + dy * dy > radius * radius) continue;
         if (px < 0 || py < 0 || px >= this.grid.w || py >= this.grid.h)
           continue;
-        g.mat[(py * this.grid.w + px) | 0] = materialId;
-        // clear auxiliary fields when painting new cells
         const i = (py * this.grid.w + px) | 0;
-        g.temp[i] = 20;
+        g.mat[i] = materialId;
+        // set reasonable initial temperature based on material and locally cool/heat
+        const mat = registry[materialId];
+        if (mat?.name === "Ice") {
+          g.temp[i] = Math.min(g.temp[i], 0);
+          // chill local area slightly
+          for (let oy = -1; oy <= 1; oy++) {
+            for (let ox = -1; ox <= 1; ox++) {
+              const nx = px + ox;
+              const ny = py + oy;
+              if (nx < 0 || ny < 0 || nx >= this.grid.w || ny >= this.grid.h)
+                continue;
+              const ni = (ny * this.grid.w + nx) | 0;
+              g.temp[ni] = Math.min(g.temp[ni], 5);
+            }
+          }
+        } else if (mat?.name === "Lava") {
+          g.temp[i] = Math.max(g.temp[i], 800);
+        } else if (mat?.name === "Water") {
+          g.temp[i] = Math.min(g.temp[i], 25);
+        } else if (mat?.name === "Fire") {
+          g.temp[i] = Math.max(g.temp[i], 420);
+        }
+        // clear auxiliary fields when painting new cells
         g.pressure[i] = 0;
         g.aux[i] = 0;
         g.humidity[i] = 0;

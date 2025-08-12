@@ -59,7 +59,8 @@ export function applyThermal(engine: Engine, write: GridView) {
       T[i] = ambient + (T[i] - ambient) * cooling;
 
       // phase changes
-      if (id === ICE && T[i] >= (m.meltingPoint ?? 0)) {
+      if (id === ICE && T[i] >= (m.meltingPoint ?? 0) + 5) {
+        // require a small buffer above melting point to prevent instant melt
         M[i] = WATER;
       }
       if (id === WATER) {

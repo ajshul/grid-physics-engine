@@ -140,7 +140,7 @@ export function stepLiquid(
         engine.markDirty(x + 1, y + 1);
         continue;
       }
-      // lateral flow guided by pressure gradient
+      // lateral flow guided by pressure gradient; water cools hot gas pockets it flows into
       const spread = Math.max(1, 3 - (m.viscosity ?? 1));
       const pHere = P[i] | 0;
       let bestDx = 0;
@@ -176,6 +176,9 @@ export function stepLiquid(
         if (W[target] === 0 || registry[W[target]]?.category === CAT.GAS) {
           W[i] = 0;
           W[target] = id;
+          // if moving water into hot gas region, apply cooling to prevent persistent steam traps
+          if (id === WATER && T[target] > 50)
+            T[target] = Math.max(20, T[target] - 2);
           engine.markDirty(x, y);
           engine.markDirty(x + bestDx, y);
         }

@@ -60,8 +60,13 @@ export default function CanvasView() {
     };
     const onMove = (e: PointerEvent) => {
       const rect = cvs.getBoundingClientRect();
-      const x = Math.floor(((e.clientX - rect.left) / rect.width) * W);
-      const y = Math.floor(((e.clientY - rect.top) / rect.height) * H);
+      let x = Math.floor(((e.clientX - rect.left) / rect.width) * W);
+      let y = Math.floor(((e.clientY - rect.top) / rect.height) * H);
+      if (Number.isNaN(x) || Number.isNaN(y)) return;
+      if (x < 0) x = 0;
+      if (y < 0) y = 0;
+      if (x >= W) x = W - 1;
+      if (y >= H) y = H - 1;
       const front = engine.grid.frontIsA ? engine.grid.a : engine.grid.b;
       const i = y * W + x;
       useStore.setState({
@@ -98,13 +103,10 @@ export default function CanvasView() {
   }, []);
 
   return (
-    <div className="crt" style={{ position: "absolute", inset: 0 }}>
-      <canvas
-        ref={canvasRef}
-        className="image-render-pixel game-canvas"
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
-      />
-      <div className="scanlines" />
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="image-render-pixel game-canvas"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
+    />
   );
 }

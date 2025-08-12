@@ -8,7 +8,6 @@ interface UIState {
   paused: boolean;
   overlay: "none" | "temp" | "pressure";
   engine: Engine | null;
-  showScanlines: boolean;
   hovered?: {
     x: number;
     y: number;
@@ -26,6 +25,5 @@ export const useStore = create<UIState>(() => ({
   paused: false,
   overlay: "none",
   engine: null,
-  showScanlines: true,
   hovered: null,
 }));

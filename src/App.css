@@ -129,48 +129,7 @@ body {
   cursor: not-allowed;
 }
 
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.switch {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  display: inline-block;
-}
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background: #2a2a33;
-  border: 2px solid var(--border);
-  transition: 0.2s;
-}
-.slider:before {
-  content: "";
-  position: absolute;
-  height: 14px;
-  width: 14px;
-  left: 4px;
-  top: 3px;
-  background: var(--accent);
-  border: 2px solid #0a0;
-  transition: 0.2s;
-  box-shadow: 0 0 0 2px #000;
-}
-.switch input:checked + .slider {
-  background: #1e1e24;
-}
-.switch input:checked + .slider:before {
-  transform: translateX(18px);
-}
+.toggle-row { display: none; }
 
 .palette {
   display: grid;
@@ -266,19 +225,8 @@ body {
   overflow: hidden;
 }
 
-/* CRT + scanlines */
-.crt {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-.game-canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
+/* Canvas should fill container */
+.game-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 
 /* Ensure any canvas inside viewport truly fills */
 .viewport canvas {
@@ -287,20 +235,5 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
-.scanlines {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.05) 1px,
-    rgba(0, 0, 0, 0.05) 1px,
-    rgba(0, 0, 0, 0.05) 3px
-  );
-  mix-blend-mode: overlay;
-  opacity: 0;
-}
-.with-crt .scanlines {
-  opacity: 0.25;
-}
+/* Remove CRT remnants */
+.scanlines { display: none; }

@@ -30,7 +30,7 @@ This README summarizes how to run the project, the architecture, materials and i
   - Step: advance one frame (when paused)
   - Clear: reset the world to ambient
   - Overlay: None / Temperature / Pressure
-  - CRT: enable/disable scanline overlay
+  - CRT: removed
 
 Planned (see TODO.md): additional tools (line/rect/fill/eyedropper/fan/heater/cooler), expanded inspector, save/load/undo.
 
@@ -66,7 +66,7 @@ src/
   state/
     useStore.ts         # Zustand UI store
   ui/
-     CanvasView.tsx      # canvas + input interaction + CRT wrapper
+     CanvasView.tsx      # canvas + input interaction
      Palette.tsx         # material selection grid + overlay toggle + compact inspector
    tests/
      *.test.ts           # determinism, first-principles physics, pressure, overlays, humidity, category rules

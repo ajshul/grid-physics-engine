@@ -4,7 +4,7 @@ import { useStore } from "./state/useStore";
 import "./App.css";
 
 export default function App() {
-  const { brush, speed, paused, engine, showScanlines } = useStore();
+  const { brush, speed, paused, engine } = useStore();
   const set = useStore.setState;
   return (
     <div className="app-shell">
@@ -58,17 +58,7 @@ export default function App() {
               STEP
             </button>
           </div>
-          <div className="toggle-row">
-            <label className="label">CRT</label>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={showScanlines}
-                onChange={(e) => set({ showScanlines: e.target.checked })}
-              />
-              <span className="slider" />
-            </label>
-          </div>
+          {/* CRT toggle removed */}
         </div>
         <Palette />
         <footer className="footer">
@@ -76,7 +66,7 @@ export default function App() {
         </footer>
       </aside>
       <main className="stage">
-        <div className={`viewport ${showScanlines ? "with-crt" : ""}`}>
+        <div className="viewport">
           <CanvasView />
         </div>
       </main>

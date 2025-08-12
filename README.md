@@ -72,7 +72,7 @@ src/
 - Update order per frame (via PassPipeline): Pressure → Powder → Liquid → Gas → Energy → Objects → Chemistry → Thermal/Reactions
 - Pressure: static and impulse components; bottom-up accumulation for liquids, gradient for gases; blended for flow/venting
 - Thermal: antisymmetric, mass-aware conduction; additive ambient cooling; latent heat (ice↔water); boiling delayed under pressure; steam rises then condenses
-  - Empty space is strongly coupled to ambient to prevent residual heat; temperature overlay reflects current temperatures accurately
+  - Empty space is strongly coupled to ambient to prevent residual heat; overlays redraw the full frame each tick to avoid stale visualization
 - Reactions: water+lava→stone+steam (brief heat gating, then precedence); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets; lava preheats/ignites nearby oil/wood before it cools to stone
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
 

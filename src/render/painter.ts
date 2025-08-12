@@ -18,7 +18,11 @@ export function blit(
   overlay: OverlayKind = "none"
 ): void {
   const data = new Uint32Array(imageData.data.buffer);
+  // Overlays depend on temperature/pressure values that can change without
+  // material movement. To avoid stale visuals, force a full redraw when any
+  // overlay is active.
   const fullRedraw =
+    overlay !== "none" ||
     dirtyChunks.size === 0 ||
     dirtyChunks.size > ((w * h) / (chunkSize * chunkSize)) * 0.6;
   if (fullRedraw) {

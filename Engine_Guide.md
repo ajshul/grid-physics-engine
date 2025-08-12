@@ -177,7 +177,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 ## Rendering and Overlays
 
-Renderer paints via palette; repaints only dirty chunks marked during the step.
+Renderer paints via palette; repaints only dirty chunks marked during the step. When temperature/pressure overlays are enabled, a full‑frame redraw is forced each tick to ensure overlays reflect current field values without stale regions.
 
 - Overlays: temperature (blue→red around ambient) and pressure (static+impulse blended). Their alpha scales with magnitude.
 

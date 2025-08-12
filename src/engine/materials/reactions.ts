@@ -406,9 +406,19 @@ export function applyThermal(engine: Engine, write: GridView) {
         }
       }
 
-      // --- Ember lifecycle ---
+      // --- Ember/Smoke transition for cooling fire ---
       if (id === FIRE && T[i] < 300) {
-        M[i] = EMBER;
+        const origin = VX[i] | 0; // 2 = wood, 1 = oil, 0 = unknown/other
+        if (origin === 2) {
+          M[i] = EMBER;
+        } else {
+          const smokeId = getMaterialIdByName("Smoke");
+          if (smokeId) {
+            M[i] = smokeId as any;
+            // give cooled smoke a reasonable temperature band
+            T[i] = Math.max(80, Math.min(T[i], 220));
+          }
+        }
       }
       if (id === EMBER) {
         // deterministic ember lifetime using AUX as counter

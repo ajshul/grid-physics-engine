@@ -40,6 +40,7 @@ export class Engine {
         if (px < 0 || py < 0 || px >= this.grid.w || py >= this.grid.h)
           continue;
         const i = (py * this.grid.w + px) | 0;
+        const prevId = g.mat[i] | 0;
         g.mat[i] = materialId;
         // set reasonable initial temperature based on material and locally cool/heat
         const mat = registry[materialId];
@@ -63,6 +64,13 @@ export class Engine {
           g.temp[i] = Math.min(g.temp[i], 25);
         } else if (mat?.name === "Fire") {
           g.temp[i] = Math.max(g.temp[i], 420);
+          // Tag origin for burnout byproducts if painting directly over fuel
+          const prev = registry[prevId];
+          if (prev?.name === "Oil") {
+            g.velX[i] = 1 as any;
+          } else if (prev?.name === "Wood") {
+            g.velX[i] = 2 as any;
+          }
         }
         // clear auxiliary fields when painting new cells
         g.pressure[i] = 0;

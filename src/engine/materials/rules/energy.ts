@@ -135,14 +135,16 @@ export function stepEnergy(
           const origin = VX[i] | 0;
           if (canWrite(i)) {
             if (origin === 2) {
+              // Wood-origin fire quenches into an ember
               W[i] = EMBER;
               T[i] = Math.min(T[i], 240);
             } else if (origin === 1) {
               W[i] = SMOKE;
               T[i] = Math.min(T[i], 200);
             } else {
-              W[i] = EMBER;
-              T[i] = Math.min(T[i], 240);
+              // Default: quenched flames dissipate to smoke
+              W[i] = SMOKE;
+              T[i] = Math.min(T[i], 220);
             }
           }
           extinguished = true;
@@ -214,12 +216,36 @@ export function stepEnergy(
         }
       }
 
+      // Wood-origin fires emit more smoke while burning (visual realism)
+      if ((VX[i] | 0) === 2) {
+        const around = [i - 1, i + 1, i - w, i + w];
+        for (const k of around) {
+          if (R[k] === 0 && canWrite(k) && rand() < 0.08) {
+            W[k] = SMOKE;
+          }
+        }
+      }
+
       // Lifetime and burnout → smoke/ember (fuel-aware deterministic duration)
       let life = AUX[i];
       // Longer for wood, shorter for oil
       if (!life) {
         const origin = VX[i] | 0;
-        const base = origin === 2 ? 45 : origin === 1 ? 18 : 25; // frames at 60Hz
+        // Infer origin from immediate neighbors if unknown
+        if (origin === 0) {
+          const neigh = [i - 1, i + 1, i - w, i + w];
+          let inferred: 0 | 1 | 2 = 0;
+          for (const j of neigh) {
+            const m = registry[R[j]];
+            if (m?.name === "Wood") {
+              inferred = 2;
+              break;
+            }
+            if (m?.name === "Oil") inferred = inferred === 2 ? 2 : 1;
+          }
+          if (inferred !== 0) VX[i] = inferred as any;
+        }
+        const base = (VX[i] | 0) === 2 ? 160 : (VX[i] | 0) === 1 ? 18 : 25; // frames at 60Hz
         life = (base * Math.max(1, Math.round(engine.dt * 60))) as any;
       }
       life--;
@@ -241,9 +267,9 @@ export function stepEnergy(
             if (W[k] === 0 && canWrite(k) && rand() < 0.3) W[k] = ASH as any;
           }
         } else {
-          // default: ember
-          W[i] = EMBER;
-          T[i] = Math.min(T[i], 260);
+          // default burnout: smoke unless clearly wood-origin
+          W[i] = SMOKE;
+          T[i] = Math.max(80, Math.min(T[i], 220));
         }
       }
       // If surrounded by cold non-flammable materials, shorten lifetime slightly
@@ -252,6 +278,19 @@ export function stepEnergy(
       for (const j of neigh)
         if (T[j] < 100 && !registry[R[j]]?.flammable) coldNeighbors++;
       if (coldNeighbors >= 3 && AUX[i] > 0) AUX[i] = (AUX[i] - 1) as any;
+
+      // If no nearby fuel, accelerate burnout so fire quickly smokes out
+      let hasFuelNeighbor = false;
+      for (const j of neigh) {
+        if (registry[R[j]]?.flammable) {
+          hasFuelNeighbor = true;
+          break;
+        }
+      }
+      const origin = VX[i] | 0;
+      if (origin !== 2 && !hasFuelNeighbor && AUX[i] > 0) {
+        AUX[i] = Math.max(0, AUX[i] - 2) as any;
+      }
 
       // Dust flash hazard: if nearby density of dust is high, flash to smoke/ash with a small impulse bump
       if (DUST) {

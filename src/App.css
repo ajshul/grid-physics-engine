@@ -129,7 +129,9 @@ body {
   cursor: not-allowed;
 }
 
-.toggle-row { display: none; }
+.toggle-row {
+  display: none;
+}
 
 .palette {
   display: grid;
@@ -226,7 +228,13 @@ body {
 }
 
 /* Canvas should fill container */
-.game-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.game-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 
 /* Ensure any canvas inside viewport truly fills */
 .viewport canvas {
@@ -236,4 +244,6 @@ body {
   height: 100% !important;
 }
 /* Remove CRT remnants */
-.scanlines { display: none; }
+.scanlines {
+  display: none;
+}

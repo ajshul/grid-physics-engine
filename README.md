@@ -5,10 +5,10 @@ A modern, deterministic, and extensible 2D grid-based physics sandbox built with
 - Deterministic simulation (seeded RNG), double-buffered stepping
 - Structure-of-Arrays (SoA) grid for performance
 - Category rules for powders, liquids, gases, energy (fire), and objects
-- Thermal diffusion + phase changes + reactions (per-material conductivity, hysteresis, vitrification)
-- Pressure field (pseudo-hydrostatic) for liquid and gas guidance (now persistent with decay, diffusion, and impulses)
+- Thermal conduction + phase changes + reactions (antisymmetric, mass-aware conduction; latent heat; vitrification)
+- Pressure field for liquid/gas guidance: persistent static field with decay/diffusion plus a separate transient impulse buffer (blended)
 
-This README summarizes how to run the project, the architecture, materials and interactions, and how to extend it. For a deep-dive design, see `../Materials_Interaction_Guide.md`.
+This README summarizes how to run the project, the architecture, materials and interactions, and how to extend it. For a deep-dive, see `./Engine_Guide.md`.
 
 ## Quick Start
 
@@ -22,6 +22,7 @@ This README summarizes how to run the project, the architecture, materials and i
 
 - Left click: paint with the selected material
 - Sidebar: pick material, change brush size, adjust speed, pause/resume
+- Toggle overlays (temperature/pressure) in the sidebar
 
 Planned (not yet implemented; see TODO.md): temperature/pressure overlays, additional tools (line/rect/fill/eyedropper/fan/heater/cooler), inspector panel, save/load/undo.
 
@@ -63,10 +64,10 @@ src/
 ## Engine Overview
 
 - Double buffer step: read Front, write Back, then swap
-- Update order per frame: Powder → Liquid → Gas → Energy → Objects → Thermal/Reactions
-- Pressure pass (i16): persistent with decay/diffusion; bottom-up accumulation for liquids, gradient for gases
-- Thermal: 4-neighborhood diffusion with per-material conductivity + phase changes (ice↔water↔steam) with hysteresis
-- Reactions: water+lava→stone+steam; rubber pops to smoke when hot; wood chars; foam slowly decays
+- Update order per frame: Pressure → Powder → Liquid → Gas → Energy → Objects → Chemistry → Thermal/Reactions
+- Pressure: static and impulse components; bottom-up accumulation for liquids, gradient for gases; blended for flow/venting
+- Thermal: antisymmetric, mass-aware conduction; additive ambient cooling; latent heat (ice↔water); boiling delayed under pressure; steam rises then condenses
+- Reactions: water+lava→stone+steam (heat-gated); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
 
 ## Materials (Selected)
@@ -83,18 +84,18 @@ src/
 - Water + Lava → Stone + Steam (heats area)
 - Sand + Lava → Glass (high heat conversion; see guide)
 - Oil near Fire ignites readily and propagates fire
-- Foam suppresses Fire with high probability; slowly decays into Water
+- Foam deterministically suppresses Fire and may decay into Water
 - Acid dissolves Stone/Wood/Glass into Rubble and emits heat + some Smoke
 - Rubber pops into Smoke at high temperature
-- Steam condenses to Water near cold cells; Water freezes to Ice at ≤0°C
+- Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C
 
-For a detailed first-principles specification, consult `../Materials_Interaction_Guide.md`.
+For a detailed first-principles specification, see `./Engine_Guide.md`.
 
 ## Determinism and Performance
 
-- Seeded RNG via `mulberry32`; category passes use `rand()` for probabilistic behavior
+- Seeded RNG via `mulberry32`; probabilistic behavior is scoped and minimized; budgets/thresholds preferred for test-critical behavior
 - SoA arrays minimize allocation and favor fast copies
-- Pressure-guided liquid/gas movement improves realism without heavy solvers; liquids have slope bias; gases rise faster when hot
+- Pressure-guided liquid/gas movement improves realism without heavy solvers; liquids have slope bias; gases rise faster when hot; steam has vertical preference with age/condense rules
 - Build is optimized via Vite; consider moving simulation into a Web Worker (see TODO)
 
 ## Testing

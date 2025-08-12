@@ -98,11 +98,11 @@ export default function CanvasView() {
   }, []);
 
   return (
-    <div className="crt">
+    <div className="crt" style={{ position: "absolute", inset: 0 }}>
       <canvas
         ref={canvasRef}
         className="image-render-pixel game-canvas"
-        style={{ width: "100%", height: "100%", display: "block" }}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
       />
       <div className="scanlines" />
     </div>

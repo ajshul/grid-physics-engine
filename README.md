@@ -62,8 +62,8 @@ src/
   ui/
     CanvasView.tsx      # canvas + input interaction
     Palette.tsx         # material selection grid + overlay toggle + inspector
-  tests/
-    *.test.ts           # basic determinism/rules tests
+   tests/
+     *.test.ts           # determinism, first-principles physics, pressure, overlays, humidity, category rules
 ```
 
 ## Engine Overview
@@ -102,7 +102,15 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
   - Dust has a higher ignition temperature to avoid spurious ignition in recently cooled areas
 - Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C
 
-For a detailed first-principles specification, see `./Engine_Guide.md`.
+ For a detailed first-principles specification, see `./Engine_Guide.md`.
+
+ ### Test Coverage (Added)
+
+ - Pressure model: hydrostatic gradient behavior, impulse blending/decay, diffusion and venting
+ - Painting semantics: temperature presets and buffer resets
+ - Humidity: wetting from Water/Foam/Acid and Mud→Dust transfer
+ - Gas/liquid bubble swap: hot gas releases under a sticky phase
+ - Overlay consistency: temperature/pressure fields evolve near activity
 
 ## Determinism and Performance
 

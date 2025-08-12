@@ -62,7 +62,7 @@ Implemented via `PassPipeline` (`engine/pipeline.ts`). Each pass writes to the b
 Two components: static and impulse.
 
 - Decay: static decays slowly, impulse decays faster (dt‑scaled). Both step toward zero to remove residual noise.
-- Accumulation: bottom‑up hydrostatic accumulation for liquids; top‑down gradient for gases.
+- Accumulation: bottom‑up hydrostatic accumulation for liquids (values propagate upward along static columns, so numeric magnitude is larger higher up the column); top‑down gradient for gases.
 - Diffusion: light blending to remove spikes (single pass).
 - Blending: the final `pressure` used by fluids is `static + k*impulse` (k≈0.6 by default), so shocks persist briefly.
   - Tunables for decay, diffusion, and blend live in `src/engine/constants.ts`.
@@ -145,7 +145,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 - Density layering: heavier sinks, lighter rises (with immiscibility hysteresis)
 - Downward flow if empty/gas below; diagonal downhill based on local pressure stack and parity to avoid bias
 - Lateral flow guided by pressure gradient; viscosity limits spread per frame
-- Humidity: WATER/FOAM/ACID wet neighbors, affecting powders and fire suppression
+- Humidity: WATER/FOAM/ACID wet themselves and their 4-neighbors each frame (applied regardless of motion), affecting powders and fire suppression
 - Reaction (Water + Lava → Stone + Steam) requires sufficient heat to avoid instant stone coating; injects a small pressure impulse when it reacts (reaction gating and handling centralized in the liquid pass)
 
 ### Gases (`rules/gas.ts`)

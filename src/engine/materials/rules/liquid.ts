@@ -26,6 +26,13 @@ export function stepLiquid(
       const m = registry[id];
       if (!m || m.category !== "liquid") continue;
 
+      // humidity coupling: water/foam/acid wet neighboring cells (apply regardless of movement)
+      if (id === WATER || m.name === "Foam" || m.name === "Acid") {
+        const add = id === WATER ? 12 : m.name === "Foam" ? 8 : 10;
+        const n = [i, i - 1, i + 1, i - w, i + w];
+        for (const j of n) HUM[j] = Math.min(255, (HUM[j] | 0) + add) as any;
+      }
+
       // Lava strongly preheats adjacent cells before movement to better model radiative/contact heating
       if (m.name === "Lava") {
         const neigh = [i - 1, i + 1, i - w, i + w];
@@ -246,12 +253,7 @@ export function stepLiquid(
 
       // (water+lava handled earlier)
 
-      // humidity coupling: water/foam/acid wet neighboring cells
-      if (id === WATER || m.name === "Foam" || m.name === "Acid") {
-        const add = id === WATER ? 12 : m.name === "Foam" ? 8 : 10;
-        const n = [i, i - 1, i + 1, i - w, i + w];
-        for (const j of n) HUM[j] = Math.min(255, (HUM[j] | 0) + add) as any;
-      }
+      // (humidity coupling moved earlier so it applies even on frames with movement)
     }
   }
 }

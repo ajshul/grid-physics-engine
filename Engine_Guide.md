@@ -46,11 +46,11 @@ Double buffering (`a` and `b`) ensures “read front, write back, then swap” e
 2. Powders (`materials/rules/powder.ts`)
 3. Liquids (`materials/rules/liquid.ts`)
 4. Gases (`materials/rules/gas.ts`)
- 5. Solids (mostly stationary)
- 6. Energy (fire/ember) (`materials/rules/energy.ts`) — fuel‑aware ignition/burnout; origin tagging in `velX`
- 7. Objects (bomb/meteor/ball) (`materials/rules/object.ts`)
- 8. Chemistry pass (acid) (`passes/acid.ts`)
- 9. Thermal/Phase/Reactions (`materials/reactions.ts`)
+5. Solids (mostly stationary)
+6. Energy (fire/ember) (`materials/rules/energy.ts`) — fuel‑aware ignition/burnout; origin tagging in `velX`
+7. Objects (bomb/meteor/ball) (`materials/rules/object.ts`)
+8. Chemistry pass (acid) (`passes/acid.ts`)
+9. Thermal/Phase/Reactions (`materials/reactions.ts`)
 10. Swap buffers
 
 Implemented via `PassPipeline` (`engine/pipeline.ts`). Each pass writes to the back buffer and uses write-guards to minimize cross-pass clobbering. The order avoids write conflicts and reflects physical causality (pressure → motion → reactions → thermal).
@@ -137,6 +137,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 - Settle vertically into empty/gas; diagonal slip controlled by `slip`, humidity, and nearby gas “wind”
 - Displace lighter liquids when falling; write‑buffer checks prevent race conditions
+- Mud wets Dust beneath by transferring humidity; wetting accumulates in a budget and Dust converts to Mud once sufficiently wet
 
 ### Liquids (`rules/liquid.ts`)
 
@@ -159,6 +160,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 - Foam: deterministically quenches adjacent Fire by converting the fire cell to Foam; never converts Foam to Fire
 - Oil: more easily ignited and propagates better along contiguous Oil
 - Dust flash: high local Dust density near Fire may flash to Smoke and emits a small impulse
+- Embers: fall if unsupported (with occasional diagonal slip), can ignite Dust on contact, may crumble to Ash during free fall, and quench to Ash when adjacent to Water
 
 ### Objects (`rules/object.ts`)
 

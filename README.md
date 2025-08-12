@@ -96,6 +96,8 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
 - Rubber pops into Smoke at high temperature
 - Fuel‑aware fire burnout: burning oil tends to become Smoke; burning wood tends to become Ember (and can later ash)
   - Burning spreads emit small smoke puffs in nearby empty cells; embers warm neighbors, cool gradually, and only reignite if fuel is adjacent
+  - Embers fall if unsupported (with occasional diagonal slip), can ignite dust they contact, may crumble to Ash while falling, and quench to Ash when touching Water
+  - Mud wets Dust below over time by transferring humidity; sufficiently wet Dust converts to Mud
 - Steam rises when hot and condenses to Water near cold cells; Water freezes to Ice at ≤0°C
 
 For a detailed first-principles specification, see `./Engine_Guide.md`.

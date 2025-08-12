@@ -2,6 +2,12 @@ import type { Engine } from "../engine";
 import type { GridView } from "../grid";
 import { registry } from "../materials";
 import { CAT } from "../materials/categories";
+import {
+  STATIC_PRESSURE_DECAY_PER_STEP,
+  IMPULSE_DECAY_PER_STEP,
+  PRESSURE_DIFFUSION_ALPHA,
+  IMPULSE_BLEND_FACTOR,
+} from "../constants";
 
 // Very simple hydrostatic-like pressure estimator for liquids/gases.
 // Not physically accurate, but provides gradients to drive lateral flow.
@@ -17,8 +23,11 @@ export function computePressure(
 
   // 1) decay existing static pressure and the impulse field separately
   const dt = engine.dt;
-  const staticDecay = Math.pow(0.95, Math.max(1, dt * 60));
-  const impulseDecay = Math.pow(0.8, Math.max(1, dt * 60));
+  const staticDecay = Math.pow(
+    STATIC_PRESSURE_DECAY_PER_STEP,
+    Math.max(1, dt * 60)
+  );
+  const impulseDecay = Math.pow(IMPULSE_DECAY_PER_STEP, Math.max(1, dt * 60));
   for (let i = 0; i < P.length; i++) {
     P[i] = clamp16(stepTowardZero(((P[i] | 0) * staticDecay) | 0));
     I[i] = clamp16(stepTowardZero(((I[i] | 0) * impulseDecay) | 0));
@@ -49,7 +58,7 @@ export function computePressure(
   }
 
   // 3) light diffusion to bleed spikes (static field only)
-  const alpha = 0.05;
+  const alpha = PRESSURE_DIFFUSION_ALPHA;
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -69,7 +78,7 @@ export function computePressure(
   // for this frame, but keep impulse around with its own decay so it persists
   // for a few frames.
   for (let i = 0; i < P.length; i++) {
-    const eff = ((P[i] | 0) + (I[i] | 0) * 0.6) | 0;
+    const eff = ((P[i] | 0) + (I[i] | 0) * IMPULSE_BLEND_FACTOR) | 0;
     P[i] = clamp16(eff);
   }
 }

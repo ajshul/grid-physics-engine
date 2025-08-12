@@ -42,16 +42,16 @@ Double buffering (`a` and `b`) ensures “read front, write back, then swap” e
 
 ## Update Order per Frame
 
-1) Pressure pass (`passes/pressure.ts`)
-2) Powders (`materials/rules/powder.ts`)
-3) Liquids (`materials/rules/liquid.ts`)
-4) Gases (`materials/rules/gas.ts`)
-5) Solids (mostly stationary)
-6) Energy (fire/ember) (`materials/rules/energy.ts`)
-7) Objects (bomb/meteor/ball) (`materials/rules/object.ts`)
-8) Chemistry pass (acid) (`passes/acid.ts`)
-9) Thermal/Phase/Reactions (`materials/reactions.ts`)
-10) Swap buffers
+1. Pressure pass (`passes/pressure.ts`)
+2. Powders (`materials/rules/powder.ts`)
+3. Liquids (`materials/rules/liquid.ts`)
+4. Gases (`materials/rules/gas.ts`)
+5. Solids (mostly stationary)
+6. Energy (fire/ember) (`materials/rules/energy.ts`)
+7. Objects (bomb/meteor/ball) (`materials/rules/object.ts`)
+8. Chemistry pass (acid) (`passes/acid.ts`)
+9. Thermal/Phase/Reactions (`materials/reactions.ts`)
+10. Swap buffers
 
 The order avoids write conflicts between categories and reflects typical physical causality (pressure → motion → reactions → thermal).
 
@@ -207,12 +207,12 @@ All tests should pass deterministically under the default `dt`.
 
 ## Extensibility Guidelines
 
-1) Add a material in `materials/presets.ts` with properties. Prefer realistic densities/heat capacities (relative scale) and explicit category
-2) If behavior is general to a category, add it to the corresponding `rules/*.ts`; if it is thermal or cross‑category, prefer `reactions.ts`
-3) Use `aux` for budgets/fuses/ages; keep units interpretable and `dt`‑scaled
-4) Respect determinism: constrain RNG usage locally; avoid pass order dependencies; prefer thresholds and budgets
-5) Scale all continuous rates by `dt` and thermal mass; keep antisymmetric conduction semantics
-6) Add tests for new behaviors and tighten existing ones as needed
+1. Add a material in `materials/presets.ts` with properties. Prefer realistic densities/heat capacities (relative scale) and explicit category
+2. If behavior is general to a category, add it to the corresponding `rules/*.ts`; if it is thermal or cross‑category, prefer `reactions.ts`
+3. Use `aux` for budgets/fuses/ages; keep units interpretable and `dt`‑scaled
+4. Respect determinism: constrain RNG usage locally; avoid pass order dependencies; prefer thresholds and budgets
+5. Scale all continuous rates by `dt` and thermal mass; keep antisymmetric conduction semantics
+6. Add tests for new behaviors and tighten existing ones as needed
 
 ---
 
@@ -224,5 +224,3 @@ All tests should pass deterministically under the default `dt`.
 - Foam suppression strictness; ember burnout timing; acid etch budget/threshold
 
 All constants live near their usage sites and are documented with comments.
-
-

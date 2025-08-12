@@ -2,11 +2,7 @@ import type { Engine } from "../../engine";
 import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { FIRE, FOAM, SMOKE, STEAM, WATER, OIL, EMBER } from "../presets";
-
-function findByName(name: string): number | undefined {
-  const id = Object.keys(registry).find((k) => registry[+k]?.name === name);
-  return id ? +id : undefined;
-}
+import { getMaterialIdByName } from "../../utils";
 
 export function stepEnergy(
   engine: Engine,
@@ -22,8 +18,8 @@ export function stepEnergy(
   const HUM = write.humidity;
   const IMP = write.impulse;
 
-  const ASH = findByName("Ash");
-  const DUST = findByName("Dust");
+  // const ASH = getMaterialIdByName("Ash"); // reserved for future use in burnout/ash logic
+  const DUST = getMaterialIdByName("Dust");
 
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {

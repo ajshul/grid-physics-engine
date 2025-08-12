@@ -3,6 +3,7 @@ import type { GridView } from "../../grid";
 import { registry } from "../index";
 import { BOMB, METEOR } from "../presets";
 import { CAT } from "../categories";
+import { getMaterialIdByName } from "../../utils";
 
 export function stepObjects(
   engine: Engine,
@@ -13,7 +14,7 @@ export function stepObjects(
   const { w, h } = engine.grid;
   const R = read.mat;
   const W = write.mat;
-  const I = write.impulse;
+  // const I = write.impulse; // not used in main loop; explosion writes impulse
   for (let y = h - 2; y >= 1; y--) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -82,11 +83,11 @@ function explode(
   const { w, h } = engine.grid;
   const M = write.mat;
   const T = write.temp;
-  const P = write.pressure;
+  // const P = write.pressure; // not used directly here
   const I = write.impulse;
-  const smokeId = findByName("Smoke");
-  const fireId = findByName("Fire");
-  const rubbleId = findByName("Rubble");
+  const smokeId = getMaterialIdByName("Smoke");
+  const fireId = getMaterialIdByName("Fire");
+  const rubbleId = getMaterialIdByName("Rubble");
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       if (dx * dx + dy * dy > r * r) continue;
@@ -109,10 +110,7 @@ function explode(
   }
 }
 
-function findByName(name: string): number | undefined {
-  const id = Object.keys(registry).find((k) => registry[+k]?.name === name);
-  return id ? +id : undefined;
-}
+// findByName centralized in utils
 
 function heatNeighbors(
   engine: Engine,

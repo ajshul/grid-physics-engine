@@ -14,6 +14,13 @@ import {
   EMBER,
   SAND,
 } from "./presets";
+import {
+  AMBIENT_TEMPERATURE_C,
+  CONDUCTION_SCALE_PER_SEC,
+  LATENT_FUSION_ENERGY,
+  MAX_LATENT_STEP_AT_60HZ,
+} from "../constants";
+import { getMaterialIdByName } from "../utils";
 
 export function applyThermal(engine: Engine, write: GridView) {
   const { w, h } = engine.grid;
@@ -25,12 +32,12 @@ export function applyThermal(engine: Engine, write: GridView) {
   const AUX = write.aux; // used for slow boiling
 
   // constants (tunable)
-  const AMBIENT = 20;
+  const AMBIENT = AMBIENT_TEMPERATURE_C;
   const dt = engine.dt; // fixed step seconds
   // Latent heat budget for melting/freezing (scaled-to-sim units per cell mass)
   // Realistic L_f ~334 kJ/kg; our units are relative. Tune for visual pacing.
-  const LATENT_FUSION = 4000; // energy units required to change phase (fusion)
-  const MAX_LATENT_STEP = 20 * (dt * 60); // per-step cap in energy units
+  const LATENT_FUSION = LATENT_FUSION_ENERGY; // energy units required to change phase (fusion)
+  const MAX_LATENT_STEP = MAX_LATENT_STEP_AT_60HZ * (dt * 60); // per-step cap in energy units
 
   // --- Pairwise conduction (antisymmetric heat exchange) ---
   // We exchange heat between right and down neighbors only to avoid double-processing.
@@ -76,7 +83,7 @@ export function applyThermal(engine: Engine, write: GridView) {
     return Math.abs(d);
   };
   // base coupling scale controls speed of conduction in our unit system
-  const CONDUCTION_SCALE = 0.35; // tuned empirically, per second
+  const CONDUCTION_SCALE = CONDUCTION_SCALE_PER_SEC; // tuned empirically, per second
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
       const i = y * w + x;
@@ -259,10 +266,8 @@ export function applyThermal(engine: Engine, write: GridView) {
         const dT = ((AMBIENT - T[i]) * (coolPerSec * dt)) / massLava;
         T[i] += dT;
         if (T[i] < 220) {
-          const stoneId = Object.keys(registry).find(
-            (k) => registry[+k]?.name === "Stone"
-          );
-          if (stoneId) M[i] = +stoneId;
+          const stoneId = getMaterialIdByName("Stone");
+          if (stoneId) M[i] = stoneId;
         }
       }
 
@@ -273,10 +278,8 @@ export function applyThermal(engine: Engine, write: GridView) {
 
       // --- Rubber pops to smoke ---
       if (id === RUBBER && T[i] >= 260) {
-        const smokeId = Object.keys(registry).find(
-          (k) => registry[+k]?.name === "Smoke"
-        );
-        if (smokeId) M[i] = +smokeId;
+        const smokeId = getMaterialIdByName("Smoke");
+        if (smokeId) M[i] = smokeId;
       }
 
       // --- Wood charring ---
@@ -286,10 +289,8 @@ export function applyThermal(engine: Engine, write: GridView) {
         T[i] < (m.combustionTemp ?? 300)
       ) {
         if (engine.rand && engine.rand() < 0.001) {
-          const ashId = Object.keys(registry).find(
-            (k) => registry[+k]?.name === "Ash"
-          );
-          if (ashId) M[i] = +(ashId as any);
+          const ashId = getMaterialIdByName("Ash");
+          if (ashId) M[i] = ashId as any;
         }
       }
 
@@ -299,10 +300,8 @@ export function applyThermal(engine: Engine, write: GridView) {
           M[i] = WATER;
           for (const j of n) {
             if (M[j] === 0) {
-              const smokeId = Object.keys(registry).find(
-                (k) => registry[+k]?.name === "Smoke"
-              );
-              M[j] = T[i] > 80 ? STEAM : smokeId ? +(smokeId as any) : 0;
+              const smokeId = getMaterialIdByName("Smoke");
+              M[j] = T[i] > 80 ? STEAM : smokeId ? (smokeId as any) : 0;
               break;
             }
           }
@@ -352,10 +351,8 @@ export function applyThermal(engine: Engine, write: GridView) {
         for (const j of n) T[j] = Math.max(T[j], T[i] - 8);
         if (T[i] > 340) M[i] = FIRE;
         if ((AUX[i] | 0) <= 0) {
-          const ashId = Object.keys(registry).find(
-            (k) => registry[+k]?.name === "Ash"
-          );
-          if (ashId) M[i] = +(ashId as any);
+          const ashId = getMaterialIdByName("Ash");
+          if (ashId) M[i] = ashId as any;
         }
       }
     }

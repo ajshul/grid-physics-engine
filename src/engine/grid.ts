@@ -7,6 +7,9 @@ export interface GridView {
   pressure: Int16Array; // approximate hydrostatic/air pressure
   aux: Uint16Array; // generic per-cell data (timers, age, etc.)
   humidity: Uint8Array; // 0..255 wetness proxy (drives cohesion and fire suppression)
+  // latent heat accumulator for phase changes (ice↔water↔steam). Units are
+  // arbitrary but proportional to heat capacity * degrees C.
+  phase: Float32Array;
 }
 
 export interface Grid {
@@ -27,6 +30,7 @@ export function createGrid(w: number, h: number): Grid {
     pressure: new Int16Array(w * h),
     aux: new Uint16Array(w * h),
     humidity: new Uint8Array(w * h),
+    phase: new Float32Array(w * h),
   });
   return { w, h, a: alloc(), b: alloc(), frontIsA: true };
 }

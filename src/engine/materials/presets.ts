@@ -31,6 +31,8 @@ export const ICE = define({
   density: 9.2,
   meltingPoint: 0,
   conductivity: 0.5,
+  // specific heat capacity relative scale (water ~4.2, ice ~2.1)
+  heatCapacity: 2.1,
 });
 
 export const RUBBER = define({

@@ -108,7 +108,8 @@ function overlayAlpha(
 ): number {
   switch (kind) {
     case "temp":
-      return clamp01((temp - 20) / 200) * 0.55; // emphasize hot areas
+      // visualize both cold and hot relative to ambient (20 C)
+      return clamp01(Math.abs(temp - 20) / 200) * 0.6;
     case "pressure":
       return Math.min(0.6, Math.abs(pressure) / 200) * 0.5;
     default:

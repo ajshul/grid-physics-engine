@@ -44,7 +44,8 @@ export class Engine {
         // set reasonable initial temperature based on material and locally cool/heat
         const mat = registry[materialId];
         if (mat?.name === "Ice") {
-          g.temp[i] = Math.min(g.temp[i], 0);
+          // place ice slightly below freezing to avoid instant melt from ambient
+          g.temp[i] = Math.min(g.temp[i], -5);
           // chill local area slightly
           for (let oy = -1; oy <= 1; oy++) {
             for (let ox = -1; ox <= 1; ox++) {
@@ -53,7 +54,7 @@ export class Engine {
               if (nx < 0 || ny < 0 || nx >= this.grid.w || ny >= this.grid.h)
                 continue;
               const ni = (ny * this.grid.w + nx) | 0;
-              g.temp[ni] = Math.min(g.temp[ni], 5);
+              g.temp[ni] = Math.min(g.temp[ni], 0);
             }
           }
         } else if (mat?.name === "Lava") {
@@ -67,6 +68,7 @@ export class Engine {
         g.pressure[i] = 0;
         g.aux[i] = 0;
         g.humidity[i] = 0;
+        g.phase[i] = 0;
         this.markDirty(px, py);
       }
     }
@@ -93,6 +95,7 @@ export class Engine {
     gB.pressure.set(gA.pressure);
     gB.aux.set(gA.aux);
     gB.humidity.set(gA.humidity);
+    gB.phase.set(gA.phase);
 
     // compute pressure field for liquids/gases with decay
     computePressure(this, gA, gB);

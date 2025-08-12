@@ -71,7 +71,7 @@ src/
 - Thermal: antisymmetric, mass-aware conduction; additive ambient cooling; latent heat (ice↔water); boiling delayed under pressure; steam rises then condenses
 - Reactions: water+lava→stone+steam (heat-gated); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
-  
+
 Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressure decay/diffusion, impulse blend) live in `src/engine/constants.ts`.
 
 ## Materials (Selected)

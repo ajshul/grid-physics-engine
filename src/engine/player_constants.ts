@@ -38,3 +38,7 @@ export const GAS_UPWARD_MAX_VY = -20; // clamp upward speed when riding gas
 export const LIQUID_BUOYANCY_ACCEL = 28; // upward accel when submerged
 export const WATER_DRAG = 0.82; // multiplicative damping per second (vx)
 export const LIQUID_JUMP_BOOST_RATIO = 0.6; // jump push when submerged
+
+// Powder rising (when buried and holding up)
+export const POWDER_RISE_ACCEL = 26; // upward accel per second
+export const POWDER_RISE_MAX_UP_VY = -18; // clamp upward speed

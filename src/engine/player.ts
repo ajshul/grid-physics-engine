@@ -19,6 +19,8 @@ import {
   PLAYER_CONTACT_DPS,
   PLAYER_CROUCH_DROP_TIME,
   PLAYER_CROUCH_DROP_COOLDOWN,
+  POWDER_RISE_ACCEL,
+  POWDER_RISE_MAX_UP_VY,
   RUBBER_BOUNCE_MIN_IMPACT,
   RUBBER_BOUNCE_MIN_VY,
   RUBBER_BOUNCE_FACTOR,
@@ -91,8 +93,10 @@ export class Player {
     const { w, h } = engine.grid;
 
     // update drop timers
-    if (this.input.down) this.downHold = Math.min(5, this.downHold + dt); else this.downHold = 0;
-    if (this.dropCooldown > 0) this.dropCooldown = Math.max(0, this.dropCooldown - dt);
+    if (this.input.down) this.downHold = Math.min(5, this.downHold + dt);
+    else this.downHold = 0;
+    if (this.dropCooldown > 0)
+      this.dropCooldown = Math.max(0, this.dropCooldown - dt);
 
     // Movement input → target velocity
     const want = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
@@ -169,9 +173,16 @@ export class Player {
             const hitL = iL >= 0 && iL < w * h && this.isBlocking(grid.mat[iL]);
             const hitC = iC >= 0 && iC < w * h && this.isBlocking(grid.mat[iC]);
             const hitR = iR >= 0 && iR < w * h && this.isBlocking(grid.mat[iR]);
-            const liquidBelow = [iL, iC, iR].some((k) => k >= 0 && k < w * h && this.isLiquid(grid.mat[k]));
-            const powderBelow = [iL, iC, iR].some((k) => registry[grid.mat[k]]?.category === "powder");
-            const requestDrop = !!this.input.down && this.downHold >= PLAYER_CROUCH_DROP_TIME && this.dropCooldown <= 0;
+            const liquidBelow = [iL, iC, iR].some(
+              (k) => k >= 0 && k < w * h && this.isLiquid(grid.mat[k])
+            );
+            const powderBelow = [iL, iC, iR].some(
+              (k) => registry[grid.mat[k]]?.category === "powder"
+            );
+            const requestDrop =
+              !!this.input.down &&
+              this.downHold >= PLAYER_CROUCH_DROP_TIME &&
+              this.dropCooldown <= 0;
             const allowDrop = requestDrop && (powderBelow || liquidBelow);
             if ((hitL || hitC || hitR || liquidBelow) && !allowDrop) {
               // snap to surface
@@ -294,6 +305,12 @@ export class Player {
         this.vy > -this.jumpSpeed * LIQUID_JUMP_BOOST_RATIO
       )
         this.vy = -this.jumpSpeed * LIQUID_JUMP_BOOST_RATIO;
+    }
+    // Powder rising: if buried inside powder and holding jump/up, nudge upward
+    const isHerePowder = registry[here]?.category === "powder";
+    if (isHerePowder && this.input.jump) {
+      this.vy -= POWDER_RISE_ACCEL * dt;
+      if (this.vy < POWDER_RISE_MAX_UP_VY) this.vy = POWDER_RISE_MAX_UP_VY;
     }
   }
 

@@ -210,62 +210,50 @@ export class Player {
               this.y = ny;
               this.onGround = false;
               this.dropCooldown = PLAYER_CROUCH_DROP_COOLDOWN;
-              // displace powders/liquids below by nudging them down one cell when possible
-              const indices = [iL, iC, iR];
+              // Displace a column of powder/liquid upward to free space below feet
               const g = grid;
-              const swapCells = (a: number, b: number) => {
-                const M = g.mat;
-                const T = g.temp;
-                const VX = g.velX;
-                const VY = g.velY;
-                const F = g.flags;
-                const P = g.pressure;
-                const I = g.impulse;
-                const AUX = g.aux;
-                const HUM = g.humidity;
-                const PH = g.phase;
-                const m = M[a];
-                M[a] = M[b];
-                M[b] = m;
-                const t = T[a];
-                T[a] = T[b];
-                T[b] = t;
-                const vx = VX[a];
-                VX[a] = VX[b];
-                VX[b] = vx;
-                const vy = VY[a];
-                VY[a] = VY[b];
-                VY[b] = vy;
-                const f = F[a];
-                F[a] = F[b];
-                F[b] = f;
-                const p = P[a];
-                P[a] = P[b];
-                P[b] = p;
-                const imp = I[a];
-                I[a] = I[b];
-                I[b] = imp;
-                const aux = AUX[a];
-                AUX[a] = AUX[b];
-                AUX[b] = aux;
-                const hum = HUM[a];
-                HUM[a] = HUM[b];
-                HUM[b] = hum;
-                const ph = PH[a];
-                PH[a] = PH[b];
-                PH[b] = ph;
+              const copyFromTo = (src: number, dst: number) => {
+                g.mat[dst] = g.mat[src];
+                g.temp[dst] = g.temp[src];
+                g.velX[dst] = g.velX[src];
+                g.velY[dst] = g.velY[src];
+                g.flags[dst] = g.flags[src];
+                g.pressure[dst] = g.pressure[src];
+                g.impulse[dst] = g.impulse[src];
+                g.aux[dst] = g.aux[src];
+                g.humidity[dst] = g.humidity[src];
+                g.phase[dst] = g.phase[src];
               };
-              for (const k of indices) {
-                if (k < 0 || k >= w * h) continue;
-                const id = g.mat[k];
-                const cat = registry[id]?.category;
-                if (cat !== "powder" && cat !== "liquid") continue;
-                const below = k + w;
-                if (below >= 0 && below < w * h) {
-                  const belowId = g.mat[below];
-                  const belowCat = registry[belowId]?.category;
-                  if (belowId === 0 || belowCat === "gas") swapCells(k, below);
+              const clearCell = (idx: number) => {
+                g.mat[idx] = 0;
+              };
+              const tryLiftColumn = (baseIdx: number) => {
+                if (baseIdx < 0 || baseIdx >= w * h) return false;
+                const cat = registry[g.mat[baseIdx]]?.category;
+                if (cat !== "powder" && cat !== "liquid") return false;
+                const maxScan = 12;
+                let top = baseIdx;
+                for (let n = 1; n <= maxScan; n++) {
+                  const cand = baseIdx - n * w;
+                  if (cand < 0) break;
+                  const id = g.mat[cand];
+                  const ccat = registry[id]?.category;
+                  if (id === 0 || ccat === "gas") {
+                    top = cand;
+                    break;
+                  }
                 }
+                if (top === baseIdx) return false; // no space found
+                // shift [baseIdx-w..top] upward by one cell
+                for (let k = top; k <= baseIdx - w; k += w) {
+                  copyFromTo(k + w, k);
+                }
+                clearCell(baseIdx);
+                return true;
+              };
+              const bases = [iC, iL, iR];
+              for (const b of bases) {
+                tryLiftColumn(b);
               }
             } else {
               this.y = ny;
@@ -285,73 +273,49 @@ export class Player {
             );
             if (hitL || hitC || hitR) {
               if (powderAhead && this.input.jump) {
-                // attempt to displace powder upward to rise out
+                // Attempt to lift the powder column above the head to create space
                 const g = grid;
-                const indices = [iL, iC, iR];
-                const tryMoveUp = (idx: number) => {
-                  if (idx < 0 || idx >= w * h) return false;
-                  const id = g.mat[idx];
-                  if (registry[id]?.category !== "powder") return false;
-                  const above = idx - w;
-                  if (above >= 0) {
-                    const aboveId = g.mat[above];
-                    const aboveCat = registry[aboveId]?.category;
-                    if (aboveId === 0 || aboveCat === "gas") {
-                      // swap powder upward one cell
-                      const swap = (a: number, b: number) => {
-                        const M = g.mat;
-                        const T = g.temp;
-                        const VX = g.velX;
-                        const VY = g.velY;
-                        const F = g.flags;
-                        const P = g.pressure;
-                        const I = g.impulse;
-                        const AUX = g.aux;
-                        const HUM = g.humidity;
-                        const PH = g.phase;
-                        const m = M[a];
-                        M[a] = M[b];
-                        M[b] = m;
-                        const t = T[a];
-                        T[a] = T[b];
-                        T[b] = t;
-                        const vx = VX[a];
-                        VX[a] = VX[b];
-                        VX[b] = vx;
-                        const vy = VY[a];
-                        VY[a] = VY[b];
-                        VY[b] = vy;
-                        const f = F[a];
-                        F[a] = F[b];
-                        F[b] = f;
-                        const p = P[a];
-                        P[a] = P[b];
-                        P[b] = p;
-                        const imp = I[a];
-                        I[a] = I[b];
-                        I[b] = imp;
-                        const aux = AUX[a];
-                        AUX[a] = AUX[b];
-                        AUX[b] = aux;
-                        const hum = HUM[a];
-                        HUM[a] = HUM[b];
-                        HUM[b] = hum;
-                        const ph = PH[a];
-                        PH[a] = PH[b];
-                        PH[b] = ph;
-                      };
-                      swap(idx, above);
-                      return true;
+                const copyFromTo = (src: number, dst: number) => {
+                  g.mat[dst] = g.mat[src];
+                  g.temp[dst] = g.temp[src];
+                  g.velX[dst] = g.velX[src];
+                  g.velY[dst] = g.velY[src];
+                  g.flags[dst] = g.flags[src];
+                  g.pressure[dst] = g.pressure[src];
+                  g.impulse[dst] = g.impulse[src];
+                  g.aux[dst] = g.aux[src];
+                  g.humidity[dst] = g.humidity[src];
+                  g.phase[dst] = g.phase[src];
+                };
+                const clearCell = (idx: number) => {
+                  g.mat[idx] = 0;
+                };
+                const tryLiftAbove = (baseIdx: number) => {
+                  if (baseIdx < 0 || baseIdx >= w * h) return false;
+                  if (registry[g.mat[baseIdx]]?.category !== "powder") return false;
+                  const maxScan = 12;
+                  let top = baseIdx;
+                  for (let n = 1; n <= maxScan; n++) {
+                    const cand = baseIdx - n * w;
+                    if (cand < 0) break;
+                    const id = g.mat[cand];
+                    const cat = registry[id]?.category;
+                    if (id === 0 || cat === "gas") {
+                      top = cand;
+                      break;
                     }
                   }
-                  return false;
+                  if (top === baseIdx) return false;
+                  for (let k = top; k <= baseIdx - w; k += w) {
+                    copyFromTo(k + w, k);
+                  }
+                  clearCell(baseIdx);
+                  return true;
                 };
-                let moved = false;
-                for (const k of indices) moved = tryMoveUp(k) || moved;
-                if (moved) {
-                  // now allow moving up into freed space
-                  this.y = ny;
-                } else {
+                const heads = [iC, iL, iR];
+                let lifted = false;
+                for (const b of heads) lifted = tryLiftAbove(b) || lifted;
+                if (lifted) this.y = ny; else {
                   this.y = tyTop + headOffset + PLAYER_HEAD_CLEARANCE_EPS;
                   this.vy = 0;
                 }
@@ -461,3 +425,4 @@ export class Player {
     return !!m && m.category === "liquid";
   }
 }
+

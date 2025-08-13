@@ -207,3 +207,150 @@ export const BEDROCK = define({
   density: 10.0,
   conductivity: 0.05,
 });
+
+// --- SDL extension materials/props ---
+
+export const DIRT = define({
+  name: "Dirt",
+  color: 0x7b5e3b,
+  category: CAT.POWDER,
+  density: 6.0,
+  slip: 0.6,
+  conductivity: 0.12,
+});
+
+export const GRASS = define({
+  name: "Grass",
+  color: 0x3c8f2f,
+  category: CAT.SOLID,
+  density: 2.2,
+  flammable: true,
+  combustionTemp: 260,
+  conductivity: 0.08,
+});
+
+export const BUSH = define({
+  name: "Bush",
+  color: 0x2f7a28,
+  category: CAT.SOLID,
+  density: 1.8,
+  flammable: true,
+  combustionTemp: 240,
+});
+
+export const REED = define({
+  name: "Reed",
+  color: 0x86c064,
+  category: CAT.SOLID,
+  density: 1.5,
+  flammable: true,
+  combustionTemp: 230,
+});
+
+export const LEAF = define({
+  name: "Leaf",
+  color: 0x58b14c,
+  category: CAT.SOLID,
+  density: 1.4,
+  flammable: true,
+  combustionTemp: 240,
+});
+
+export const WOODEN_PLANK = define({
+  name: "WoodenPlank",
+  color: 0xa0703a,
+  category: CAT.SOLID,
+  density: 5.0,
+  flammable: true,
+  combustionTemp: 300,
+});
+
+export const THATCH = define({
+  name: "Thatch",
+  color: 0xc8a55a,
+  category: CAT.SOLID,
+  density: 1.6,
+  flammable: true,
+  combustionTemp: 240,
+});
+
+export const TILE_FLOOR = define({
+  name: "TileFloor",
+  color: 0xbcbcbc,
+  category: CAT.SOLID,
+  density: 8.2,
+  conductivity: 0.4,
+});
+
+export const STEEL_WALL = define({
+  name: "SteelWall",
+  color: 0x888c94,
+  category: CAT.SOLID,
+  density: 9.0,
+  conductivity: 0.9,
+});
+
+export const STEEL_GIRDER = define({
+  name: "SteelGirder",
+  color: 0x6f737a,
+  category: CAT.SOLID,
+  density: 8.8,
+  conductivity: 0.85,
+});
+
+export const LADDER = define({
+  name: "Ladder",
+  color: 0x9b6f3a,
+  category: CAT.SOLID,
+  density: 4.2,
+  flammable: true,
+  combustionTemp: 300,
+});
+
+export const STONE_BRICK = define({
+  name: "StoneBrick",
+  color: 0x777777,
+  category: CAT.SOLID,
+  density: 9.0,
+  conductivity: 0.6,
+});
+
+export const STEEL_GRATING = define({
+  name: "SteelGrating",
+  color: 0x9aa0a8,
+  category: CAT.SOLID,
+  density: 8.0,
+  conductivity: 0.8,
+});
+
+export const LOG = define({
+  name: "Log",
+  color: 0x7a4e2a,
+  category: CAT.SOLID,
+  density: 5.5,
+  flammable: true,
+  combustionTemp: 300,
+});
+
+export const CRATE = define({
+  name: "Crate",
+  color: 0x5f3a1e,
+  category: CAT.OBJECT,
+  density: 7.2,
+});
+
+export const STEEL_BARREL = define({
+  name: "SteelBarrel",
+  color: 0x4c5460,
+  category: CAT.OBJECT,
+  density: 8.6,
+});
+
+export const PURPLE_CHEM = define({
+  name: "PurpleChem",
+  color: 0x9b4dff,
+  category: CAT.LIQUID,
+  density: 5.3,
+  viscosity: 1,
+  immiscibleWith: ["Oil"],
+});

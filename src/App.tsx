@@ -1,4 +1,5 @@
 import CanvasView from "./ui/CanvasView";
+import SceneRoute from "./scene/SceneRoute";
 import Palette from "./ui/Palette";
 import { useStore } from "./state/useStore";
 import "./App.css";
@@ -67,7 +68,11 @@ export default function App() {
       </aside>
       <main className="stage">
         <div className="viewport">
-          <CanvasView />
+          {location.hash.startsWith("#/scenes/") ? (
+            <SceneRoute />
+          ) : (
+            <CanvasView />
+          )}
         </div>
       </main>
     </div>

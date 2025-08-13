@@ -8,14 +8,18 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:scenes": "tsx ./scripts/build-scenes.ts",
+    "preview:scene": "vite --open"
   },
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "nanoid": "^5.0.7",
     "zustand": "^5.0.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "yaml": "^2.5.1",
+    "json5": "^2.2.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -29,6 +33,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.0",
     "vite": "^7.1.0",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.4",
+    "tsx": "^4.19.2"
   }
 }

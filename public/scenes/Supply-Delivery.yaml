@@ -1,0 +1,81 @@
+metadata:
+  name: Supply Delivery
+  author: SDL
+  seed: 4321
+canvas:
+  worldWidth: 640
+  worldHeight: 200
+layers:
+  - name: cliffs
+    z: 0
+    ops:
+      - type: slope
+        x: 0
+        y: 140
+        w: 320
+        h: 50
+        direction: up
+        material: STONE
+      - type: slope
+        x: 320
+        y: 120
+        w: 320
+        h: 60
+        direction: down
+        material: STONE
+      - type: fill
+        x: 0
+        y: 180
+        w: 640
+        h: 20
+        material: BEDROCK
+  - name: structures
+    z: 1
+    ops:
+      - type: structure
+        x: 40
+        y: 80
+        w: 50
+        h: 6
+        material: WOODEN_PLANK
+      - type: structure
+        x: 220
+        y: 120
+        w: 24
+        h: 12
+        material: WOODEN_PLANK
+        hollow: true
+        roof: { material: TILE_FLOOR, thickness: 2 }
+      - type: structure
+        x: 440
+        y: 160
+        w: 28
+        h: 10
+        material: STONE_BRICK
+        hollow: true
+  - name: water
+    z: 2
+    ops:
+      - type: stream
+        from: { x: 100, y: 80 }
+        to: { x: 100, y: 150 }
+        thickness: 1
+        material: WATER
+      - type: stream
+        from: { x: 420, y: 90 }
+        to: { x: 420, y: 155 }
+        thickness: 1
+        material: WATER
+  - name: obstructions
+    z: 3
+    ops:
+      - type: scatter
+        region: { x: 300, y: 130, w: 40, h: 20 }
+        material: LOG
+        density: 0.15
+        seed: 7
+      - type: scatter
+        region: { x: 280, y: 140, w: 60, h: 20 }
+        material: STONE
+        density: 0.12
+        seed: 8

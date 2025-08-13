@@ -1,0 +1,93 @@
+metadata:
+  name: Forest Wildfire
+  author: SDL
+  seed: 2468
+canvas:
+  worldWidth: 640
+  worldHeight: 200
+layers:
+  - name: terraces
+    z: 0
+    ops:
+      - type: slope
+        x: 0
+        y: 150
+        w: 320
+        h: 40
+        direction: up
+        material: DIRT
+      - type: slope
+        x: 320
+        y: 130
+        w: 320
+        h: 60
+        direction: down
+        material: STONE
+      - type: fill
+        x: 0
+        y: 180
+        w: 640
+        h: 20
+        material: BEDROCK
+  - name: canopy
+    z: 1
+    ops:
+      - type: noiseFill
+        x: 40
+        y: 40
+        w: 560
+        h: 30
+        material: LEAF
+        threshold: 0.6
+        scale: 6
+      - type: scatter
+        region: { x: 60, y: 70, w: 520, h: 20 }
+        material: WOOD
+        density: 0.08
+        seed: 11
+  - name: fire
+    z: 2
+    ops:
+      - type: scatter
+        region: { x: 80, y: 60, w: 480, h: 10 }
+        material: FIRE
+        density: 0.15
+        seed: 3
+  - name: river
+    z: 3
+    ops:
+      - type: stream
+        from: { x: 40, y: 100 }
+        to: { x: 560, y: 160 }
+        thickness: 2
+        material: WATER
+  - name: village
+    z: 4
+    ops:
+      - type: structure
+        x: 80
+        y: 150
+        w: 24
+        h: 12
+        material: WOODEN_PLANK
+        hollow: true
+        roof: { material: THATCH, thickness: 2 }
+      - type: structure
+        x: 130
+        y: 155
+        w: 20
+        h: 10
+        material: WOODEN_PLANK
+        hollow: true
+        roof: { material: THATCH, thickness: 2 }
+  - name: embers
+    z: 5
+    ops:
+      - type: emitter
+        name: emberfall
+        x: 320
+        y: 70
+        material: EMBER
+        ratePerSec: 1
+        radius: 1
+        jitter: 40

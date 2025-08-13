@@ -1,0 +1,84 @@
+metadata:
+  name: Laboratory Spill
+  author: SDL
+  seed: 879
+canvas:
+  worldWidth: 640
+  worldHeight: 200
+layers:
+  - name: structure
+    z: 0
+    ops:
+      - type: fill
+        x: 0
+        y: 180
+        w: 640
+        h: 20
+        material: BEDROCK
+      - type: fill
+        x: 0
+        y: 120
+        w: 640
+        h: 3
+        material: TILE_FLOOR
+      - type: fill
+        x: 0
+        y: 80
+        w: 640
+        h: 3
+        material: TILE_FLOOR
+      - type: fill
+        x: 0
+        y: 0
+        w: 640
+        h: 5
+        material: STEEL_WALL
+      - type: scatter
+        region: { x: 240, y: 80, w: 160, h: 40 }
+        material: ACID
+        density: 0.3
+        seed: 4
+  - name: lower-pool
+    z: 1
+    ops:
+      - type: basin
+        x: 80
+        y: 150
+        w: 200
+        depth: 30
+        wall: STONE
+        fill:
+          material: ACID
+          level: 14
+  - name: props
+    z: 2
+    ops:
+      - type: structure
+        x: 280
+        y: 77
+        w: 10
+        h: 20
+        material: STEEL_GIRDER
+      - type: structure
+        x: 120
+        y: 117
+        w: 10
+        h: 40
+        material: LADDER
+  - name: barrel
+    z: 3
+    ops:
+      - type: structure
+        x: 300
+        y: 40
+        w: 6
+        h: 8
+        material: STEEL_BARREL
+      - type: emitter
+        name: acid-drip
+        x: 303
+        y: 48
+        material: ACID
+        ratePerSec: 0.5
+        radius: 1
+        jitter: 0.5

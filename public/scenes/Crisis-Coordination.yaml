@@ -1,0 +1,76 @@
+metadata:
+  name: Crisis Coordination
+  author: SDL
+  seed: 999
+canvas:
+  worldWidth: 640
+  worldHeight: 200
+layers:
+  - name: upper-fire
+    z: 0
+    ops:
+      - type: slope
+        x: 0
+        y: 120
+        w: 320
+        h: 50
+        direction: down
+        material: DIRT
+      - type: scatter
+        region: { x: 0, y: 100, w: 320, h: 20 }
+        material: GRASS
+        density: 0.5
+        seed: 12
+      - type: scatter
+        region: { x: 40, y: 100, w: 280, h: 20 }
+        material: FIRE
+        density: 0.2
+        seed: 13
+  - name: industrial
+    z: 1
+    ops:
+      - type: fill
+        x: 0
+        y: 180
+        w: 640
+        h: 20
+        material: BEDROCK
+      - type: fill
+        x: 320
+        y: 110
+        w: 320
+        h: 5
+        material: STEEL_GRATING
+      - type: scatter
+        region: { x: 320, y: 110, w: 320, h: 40 }
+        material: PURPLE_CHEM
+        density: 0.25
+        seed: 6
+  - name: mine-shaft
+    z: 2
+    ops:
+      - type: fill
+        x: 480
+        y: 90
+        w: 10
+        h: 90
+        material: LADDER
+  - name: settlement
+    z: 3
+    ops:
+      - type: structure
+        x: 520
+        y: 160
+        w: 40
+        h: 12
+        material: STONE
+        hollow: true
+      - type: basin
+        x: 560
+        y: 168
+        w: 64
+        depth: 20
+        wall: STONE
+        fill:
+          material: WATER
+          level: 10

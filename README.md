@@ -95,13 +95,16 @@ src/
 - Rubber: landing on Rubber bounces the player upward (speed-based).
 - Powders:
   - Stand on top by default (treated as ground).
-  - Hold Down to drop through (with a short required hold and cooldown).
-  - While buried, hold Up/Jump to rise out; nearby powder is displaced upward one cell when space exists.
+  - Hold Down to drop through. The engine attempts to displace powder downward/diagonally to open space; very deep, compact piles may still trap the player (known limitation, tracked by tests and roadmap).
+  - While buried, hold Up/Jump to rise out. The engine attempts to lift the powder column above and/or spill laterally; very tall piles can still resist (known limitation).
 - Liquids (Water, Foam, Acid): buoyancy lifts; horizontal drag applies; press Jump for a small upward boost; hold Down to dive.
 - Gases (Smoke, Steam): upward lift and drift with local gas velocity hints; upward speed is capped.
 - Fire and Lava: ignite and cause damage over time; Water/Foam quench. Health slowly recovers while cooled in Water/Foam.
 
-Tuning constants live in `src/engine/player_constants.ts` (movement, gravity, buoyancy, gas lift, rubber bounce, fall-through timings, and collision extents).
+Tuning constants live in `src/engine/player_constants.ts` (movement, gravity, buoyancy, gas lift, rubber bounce, fall-through timings, powder rise, and collision extents).
+
+Known limitations:
+- Extremely deep/wide powder piles may not fully fluidize around the player yet. See the skipped tests in `src/tests/player_powder_movement.test.ts` for the current expected behavior; planned improvements will move displacement into powder/liquid passes for better realism.
 
 Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressure decay/diffusion, impulse blend) live in `src/engine/constants.ts`.
 

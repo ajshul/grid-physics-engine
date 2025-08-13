@@ -260,16 +260,20 @@ export class Player {
                     if (
                       left >= 0 &&
                       left < w * h &&
-                      (g.mat[left] === 0 || registry[g.mat[left]]?.category === "gas") &&
-                      (registry[g.mat[b]]?.category === "powder" || registry[g.mat[b]]?.category === "liquid")
+                      (g.mat[left] === 0 ||
+                        registry[g.mat[left]]?.category === "gas") &&
+                      (registry[g.mat[b]]?.category === "powder" ||
+                        registry[g.mat[b]]?.category === "liquid")
                     ) {
                       copyFromTo(b, left);
                       clearCell(b);
                     } else if (
                       right >= 0 &&
                       right < w * h &&
-                      (g.mat[right] === 0 || registry[g.mat[right]]?.category === "gas") &&
-                      (registry[g.mat[b]]?.category === "powder" || registry[g.mat[b]]?.category === "liquid")
+                      (g.mat[right] === 0 ||
+                        registry[g.mat[right]]?.category === "gas") &&
+                      (registry[g.mat[b]]?.category === "powder" ||
+                        registry[g.mat[b]]?.category === "liquid")
                     ) {
                       copyFromTo(b, right);
                       clearCell(b);

@@ -1,0 +1,86 @@
+metadata:
+  name: Cave Exploration
+  author: SDL
+  seed: 101
+  spawn: { x: 210, y: 110 }
+canvas:
+  worldWidth: 640
+  worldHeight: 200
+layers:
+  - name: base-stone
+    z: 0
+    ops:
+      # Fill the world with stone as a solid backdrop
+      - type: fill
+        x: 0
+        y: 0
+        w: 640
+        h: 200
+        material: STONE
+  - name: caverns
+    z: 1
+    ops:
+      # Big central cavern
+      - type: carveDisk
+        cx: 220
+        cy: 110
+        r: 42
+      # Left tunnel to entrance
+      - type: carveTunnel
+        from: { x: 220, y: 110 }
+        to: { x: 40, y: 100 }
+        thickness: 5
+      # Upper loop
+      - type: carveTunnel
+        from: { x: 220, y: 80 }
+        to: { x: 280, y: 60 }
+        thickness: 4
+      - type: carveTunnel
+        from: { x: 280, y: 60 }
+        to: { x: 340, y: 90 }
+        thickness: 4
+      # Lower path toward pool chamber
+      - type: carveTunnel
+        from: { x: 220, y: 130 }
+        to: { x: 360, y: 150 }
+        thickness: 6
+      # Pool chamber carved out
+      - type: carveDisk
+        cx: 420
+        cy: 150
+        r: 28
+  - name: pool
+    z: 2
+    ops:
+      # Stone basin rim (thin) in the pool chamber
+      - type: ring
+        cx: 420
+        cy: 150
+        r: 28
+        thickness: 1
+        material: STONE
+      # Water fill in lower half of pool chamber
+      - type: fill
+        x: 392
+        y: 150
+        w: 56
+        h: 30
+        material: WATER
+  - name: details
+    z: 3
+    ops:
+      # Small alcoves
+      - type: carveDisk
+        cx: 260
+        cy: 118
+        r: 6
+      - type: carveDisk
+        cx: 180
+        cy: 95
+        r: 5
+      # A few reeds at pool edge for life
+      - type: scatter
+        region: { x: 400, y: 148, w: 40, h: 4 }
+        material: REED
+        density: 0.3
+        seed: 17

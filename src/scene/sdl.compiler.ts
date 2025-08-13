@@ -12,8 +12,9 @@ export function parseSDL(
   try {
     const obj = ext === ".json5" ? JSON5.parse(text) : parseYaml(text);
     return SDLSceneSchema.parse(obj);
-  } catch (e: any) {
-    throw new Error(`SDL parse/validate failed: ${e?.message ?? String(e)}`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`SDL parse/validate failed: ${msg}`);
   }
 }
 
@@ -38,7 +39,16 @@ export function compileScene(input: SDLSceneInput): CompileOutput {
     .flatMap((l) => l.ops)
     .filter((op) => op.type === "emitter")
     .map((op) => {
-      const e = op as any;
+      const e = op as unknown as {
+        name?: string;
+        x: number;
+        y: number;
+        material: string;
+        ratePerSec: number;
+        radius?: number;
+        jitter?: number;
+        seed?: number;
+      };
       const id = resolveMaterialIdOrThrow(e.material);
       return {
         name: e.name,

@@ -17,37 +17,76 @@ export function blit(
   worldH: number,
   viewX: number,
   viewY: number,
-  _dirtyChunks: Set<number>,
-  _chunkSize = 64,
-  overlay: OverlayKind = "none"
+  dirtyChunks: Set<number>,
+  chunkSize = 64,
+  overlay: OverlayKind = "none",
+  forceFullRedraw: boolean = true
 ): void {
   const data = new Uint32Array(imageData.data.buffer);
-  // Always redraw the viewport; it is relatively small.
   const { mat, temp, pressure } = grid;
-  for (let yv = 0; yv < viewH; yv++) {
-    const yw = yv + viewY;
-    if (yw < 0 || yw >= worldH) continue;
-    const rowView = yv * viewW;
-    const rowWorld = yw * worldW;
-    for (let xv = 0; xv < viewW; xv++) {
-      const xw = xv + viewX;
-      if (xw < 0 || xw >= worldW) continue;
-      const iWorld = rowWorld + xw;
-      const iView = rowView + xv;
-      const base = palette[mat[iWorld]] || 0x00000000;
-      if (overlay === "none") {
-        data[iView] = base;
-      } else {
-        const ov = overlayColor(overlay, temp[iWorld], pressure[iWorld]);
-        data[iView] = blendABGR(
-          base,
-          ov,
-          overlayAlpha(overlay, temp[iWorld], pressure[iWorld])
-        );
+  let wrote = false;
+
+  const drawSpan = (x0: number, y0: number, x1: number, y1: number) => {
+    const xx0 = Math.max(0, Math.min(viewW, x0));
+    const yy0 = Math.max(0, Math.min(viewH, y0));
+    const xx1 = Math.max(0, Math.min(viewW, x1));
+    const yy1 = Math.max(0, Math.min(viewH, y1));
+    if (xx1 <= xx0 || yy1 <= yy0) return;
+    for (let yv = yy0; yv < yy1; yv++) {
+      const yw = yv + viewY;
+      if (yw < 0 || yw >= worldH) continue;
+      const rowView = yv * viewW;
+      const rowWorld = yw * worldW;
+      for (let xv = xx0; xv < xx1; xv++) {
+        const xw = xv + viewX;
+        if (xw < 0 || xw >= worldW) continue;
+        const iWorld = rowWorld + xw;
+        const iView = rowView + xv;
+        const base = palette[mat[iWorld]] || 0x00000000;
+        if (overlay === "none") {
+          data[iView] = base;
+        } else {
+          const ov = overlayColor(overlay, temp[iWorld], pressure[iWorld]);
+          data[iView] = blendABGR(
+            base,
+            ov,
+            overlayAlpha(overlay, temp[iWorld], pressure[iWorld])
+          );
+        }
+      }
+    }
+    wrote = true;
+  };
+
+  if (overlay !== "none" || forceFullRedraw || dirtyChunks.size === 0) {
+    // full redraw when overlay is enabled, or when explicitly forced, or on initial frame
+    drawSpan(0, 0, viewW, viewH);
+  } else {
+    // redraw only dirty chunks intersecting the viewport
+    const firstChunkX = Math.floor(viewX / chunkSize);
+    const lastChunkX = Math.floor((viewX + viewW - 1) / chunkSize);
+    const firstChunkY = Math.floor(viewY / chunkSize);
+    const lastChunkY = Math.floor((viewY + viewH - 1) / chunkSize);
+    for (let cy = firstChunkY; cy <= lastChunkY; cy++) {
+      for (let cx = firstChunkX; cx <= lastChunkX; cx++) {
+        const key = (cy << 16) | cx;
+        if (!dirtyChunks.has(key)) continue;
+        // compute clip in view coords
+        const worldX0 = cx * chunkSize;
+        const worldY0 = cy * chunkSize;
+        const worldX1 = worldX0 + chunkSize;
+        const worldY1 = worldY0 + chunkSize;
+        // convert to view-relative rectangle
+        const vx0 = worldX0 - viewX;
+        const vy0 = worldY0 - viewY;
+        const vx1 = worldX1 - viewX;
+        const vy1 = worldY1 - viewY;
+        drawSpan(vx0, vy0, vx1, vy1);
       }
     }
   }
-  ctx.putImageData(imageData, 0, 0);
+
+  if (wrote) ctx.putImageData(imageData, 0, 0);
 }
 
 export function makePalette(colors: number[]): Uint32Array {

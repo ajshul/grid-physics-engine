@@ -1,11 +1,66 @@
 import { MATERIALS } from "../render/palette";
 import { useStore } from "../state/useStore";
+import { useEffect, useState } from "react";
+import { compileScene, parseSDL } from "../scene/sdl.compiler";
+import { applyCompiledToEngine } from "../scene/apply";
 
 export default function Palette() {
   const { selected, overlay, hovered } = useStore();
   const set = useStore.setState;
+  const [scenes, setScenes] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setScenes([
+      "Campfire-Containment",
+      "Forest-Wildfire",
+      "Laboratory-Spill",
+      "Supply-Delivery",
+      "Crisis-Coordination",
+      "Cave-Exploration",
+    ]);
+  }, []);
+
+  const loadScene = async (name: string) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/scenes/${name}.yaml`);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const txt = await res.text();
+      const parsed = parseSDL(txt, ".yaml");
+      const compiled = compileScene(parsed);
+      const { engine } = useStore.getState();
+      if (engine) {
+        applyCompiledToEngine(engine, compiled);
+        window.location.hash = `#/scenes/${encodeURIComponent(name)}`;
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="palette">
+      <div className="scene-row" style={{ marginBottom: 8 }}>
+        <label className="label" style={{ marginRight: 8 }}>
+          Scene
+        </label>
+        <select
+          onChange={(e) => e.target.value && loadScene(e.target.value)}
+          defaultValue=""
+          disabled={loading}
+        >
+          <option value="" disabled>
+            {loading ? "Loading…" : "Select a scene"}
+          </option>
+          {scenes.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="material-grid">
         {MATERIALS.map((m) => (
           <button

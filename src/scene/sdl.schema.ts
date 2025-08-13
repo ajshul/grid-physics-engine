@@ -138,6 +138,28 @@ export const OpNoiseFill = OpBase.extend({
   scale: z.number().min(1).max(64).optional(),
 });
 
+export const OpCarveRect = OpBase.extend({
+  type: z.literal("carveRect"),
+  x: z.number().int(),
+  y: z.number().int(),
+  w: z.number().int().positive(),
+  h: z.number().int().positive(),
+});
+
+export const OpCarveDisk = OpBase.extend({
+  type: z.literal("carveDisk"),
+  cx: z.number().int(),
+  cy: z.number().int(),
+  r: z.number().int().positive(),
+});
+
+export const OpCarveTunnel = OpBase.extend({
+  type: z.literal("carveTunnel"),
+  from: z.object({ x: z.number().int(), y: z.number().int() }),
+  to: z.object({ x: z.number().int(), y: z.number().int() }),
+  thickness: z.number().int().min(1).max(64).optional(),
+});
+
 export const SDLOp = z.union([
   OpFill,
   OpOverlay,
@@ -150,6 +172,9 @@ export const SDLOp = z.union([
   OpStructure,
   OpEmitter,
   OpNoiseFill,
+  OpCarveRect,
+  OpCarveDisk,
+  OpCarveTunnel,
 ]);
 
 export const SDLLayer = z.object({
@@ -164,6 +189,7 @@ export const SDLSceneSchema = z.object({
     author: z.string().optional(),
     seed: z.number().int().optional(),
     description: z.string().optional(),
+    spawn: z.object({ x: z.number().int(), y: z.number().int() }).optional(),
   }),
   canvas: z.object({
     worldWidth: z.number().int().positive(),

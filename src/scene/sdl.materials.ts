@@ -4,6 +4,11 @@ import { registry } from "../engine/materials";
 
 const cache = new Map<string, number>();
 let normalizedIndex: Map<string, number> | null = null;
+const ALIASES = new Map<string, number>([
+  ["EMPTY", 0],
+  ["AIR", 0],
+  ["VOID", 0],
+]);
 
 function normalizeKey(s: string): string {
   return s
@@ -24,6 +29,11 @@ function buildIndex(): Map<string, number> {
 export function resolveMaterialIdOrThrow(name: string): number {
   const key = name.trim();
   if (cache.has(key)) return cache.get(key)!;
+  const alias = ALIASES.get(normalizeKey(key));
+  if (typeof alias === "number") {
+    cache.set(key, alias);
+    return alias;
+  }
   const id = getMaterialIdByName(key);
   if (typeof id !== "number") {
     if (!normalizedIndex) normalizedIndex = buildIndex();

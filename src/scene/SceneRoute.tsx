@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import ScenePreview from "./scene.preview";
+import { compileScene, parseSDL } from "./sdl.compiler";
+import { applyCompiledToEngine } from "./apply";
+import { useStore } from "../state/useStore";
 
 function parseHash(): string | null {
   const h = window.location.hash || "";
@@ -9,8 +11,9 @@ function parseHash(): string | null {
 
 export default function SceneRoute() {
   const [name, setName] = useState<string | null>(() => parseHash());
-  const [sdl, setSdl] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const engine = useStore((s) => s.engine);
+
   useEffect(() => {
     const onHash = () => setName(parseHash());
     window.addEventListener("hashchange", onHash);
@@ -18,28 +21,35 @@ export default function SceneRoute() {
   }, []);
 
   useEffect(() => {
-    setSdl(null);
+    // Apply scene to the global engine when both engine and name are available
+    if (!engine || !name) return;
     setErr(null);
-    if (!name) return;
     const url = `/scenes/${name}.yaml`;
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-        return r.text();
-      })
-      .then((txt) => setSdl(txt))
-      .catch((e) =>
-        setErr(`Failed to fetch scene '${name}': ${e?.message ?? e}`)
-      );
-  }, [name]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        const txt = await res.text();
+        if (cancelled) return;
+        const parsed = parseSDL(txt, ".yaml");
+        const compiled = compileScene(parsed);
+        if (cancelled) return;
+        applyCompiledToEngine(engine, compiled);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setErr(`Failed to load scene '${name}': ${msg}`);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [engine, name]);
 
-  if (!name)
-    return (
-      <div style={{ padding: 16 }}>
-        No scene in URL. Use #/scenes/Scene-Name
-      </div>
-    );
-  if (err) return <div style={{ padding: 16, color: "#f55" }}>{err}</div>;
-  if (!sdl) return <div style={{ padding: 16 }}>Loading {name}…</div>;
-  return <ScenePreview sdlText={sdl} ext={".yaml"} />;
+  // Non-visual loader: render nothing; optionally surface errors in console
+  if (err) {
+    // eslint-disable-next-line no-console
+    console.error(err);
+  }
+  return null;
 }

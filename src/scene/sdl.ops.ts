@@ -129,6 +129,26 @@ export function applyOps(scene: SDLScene, target: PaintTarget): void {
         });
         break;
       }
+      case "carveRect": {
+        paintRect(target, op.x, op.y, op.w, op.h, 0);
+        break;
+      }
+      case "carveDisk": {
+        paintDisk(target, op.cx, op.cy, op.r, 0);
+        break;
+      }
+      case "carveTunnel": {
+        thickLine(
+          target,
+          op.from.x,
+          op.from.y,
+          op.to.x,
+          op.to.y,
+          0,
+          op.thickness ?? 2
+        );
+        break;
+      }
       case "emitter":
         // handled in compiler; geometry free
         break;

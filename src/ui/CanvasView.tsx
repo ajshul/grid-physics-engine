@@ -38,9 +38,13 @@ export default function CanvasView() {
       last = t;
       const { paused, speed } = useStore.getState();
       acc += dt * speed;
-      while (acc > 1 / 60) {
+      // Step at most 2 frames worth per render to avoid long catch-up work
+      const stepDt = 1 / 60;
+      let steps = 0;
+      while (acc > stepDt && steps < 2) {
         if (!paused) engine.step();
-        acc -= 1 / 60;
+        acc -= stepDt;
+        steps++;
       }
       const front = engine.grid.frontIsA ? engine.grid.a : engine.grid.b;
       const { overlay } = useStore.getState();
@@ -57,7 +61,8 @@ export default function CanvasView() {
         engine.cameraY,
         engine.dirty,
         engine.chunkSize,
-        overlay
+        overlay,
+        false
       );
       // Draw player overlay and HUD
       if (engine.player) {
@@ -184,7 +189,8 @@ export default function CanvasView() {
       if (!k) return;
       // prevent scrolling on space/arrow keys
       e.preventDefault();
-      p.setInput({ [k]: true } as any);
+      const update: Partial<Record<"left" | "right" | "jump" | "down", boolean>> = { [k]: true } as Record<string, boolean>;
+      p.setInput(update);
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const p = engine.player;
@@ -192,7 +198,8 @@ export default function CanvasView() {
       const k = key(e.code);
       if (!k) return;
       e.preventDefault();
-      p.setInput({ [k]: false } as any);
+      const update: Partial<Record<"left" | "right" | "jump" | "down", boolean>> = { [k]: false } as Record<string, boolean>;
+      p.setInput(update);
     };
     const onKeyPress = (e: KeyboardEvent) => {
       if (e.code === "KeyR") {
@@ -214,7 +221,6 @@ export default function CanvasView() {
       cancelAnimationFrame(raf);
     };
     // only set up once; reactive values are read from the store inside loop/handlers
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

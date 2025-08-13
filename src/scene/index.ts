@@ -1,3 +1,29 @@
-export * from "./sdl.types";
-export * from "./sdl.schema";
-export * from "./sdl.compiler";
+export type {
+  SDLMetadata,
+  SDLCamera,
+  SDLCanvas,
+  SDLOpBase,
+  OpFill,
+  OpOverlay,
+  OpScatter,
+  OpBasin,
+  OpRing,
+  OpSpot,
+  OpSlope,
+  OpStream,
+  OpStructure,
+  OpEmitter,
+  OpNoiseFill,
+  OpCarveRect,
+  OpCarveDisk,
+  OpCarveTunnel,
+  SDLOp,
+  SDLLayer,
+  SDLEntity,
+  SDLScene,
+  CompiledTiles,
+  CompiledEmitter,
+  CompileOutput,
+} from "./sdl.types";
+export { SDLSceneSchema } from "./sdl.schema";
+export { parseSDL, compileScene } from "./sdl.compiler";

@@ -1,13 +1,13 @@
-import { readdirSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, basename, extname } from "node:path";
 import { compileScene, parseSDL } from "../src/scene/sdl.compiler";
 
 function main() {
   const scenesDir = resolve(process.cwd(), "public/scenes");
   const outDir = resolve(process.cwd(), "public/scenes-compiled");
-  try {
+  if (!existsSync(outDir)) {
     mkdirSync(outDir, { recursive: true });
-  } catch {}
+  }
   const files = readdirSync(scenesDir).filter((f) =>
     /\.(ya?ml|json5)$/.test(f)
   );
@@ -16,7 +16,7 @@ function main() {
     const p = resolve(scenesDir, f);
     const ext = extname(f).toLowerCase() as ".yaml" | ".yml" | ".json5";
     const txt = readFileSync(p, "utf8");
-    const parsed = parseSDL(txt, ext === ".yml" ? ".yaml" : (ext as any));
+    const parsed = parseSDL(txt, ext === ".yml" ? ".yaml" : (ext as ".yaml" | ".json5"));
     const compiled = compileScene(parsed);
     const base = basename(f).replace(/\.(ya?ml|json5)$/i, "");
     const outPath = resolve(outDir, `${base}.json`);

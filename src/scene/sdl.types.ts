@@ -11,6 +11,7 @@ export type SDLMetadata = {
   author?: string;
   seed?: number;
   description?: string;
+  spawn?: { x: number; y: number };
 };
 
 export type SDLCamera = {
@@ -42,7 +43,10 @@ export type SDLOpBase = {
     | "stream"
     | "structure"
     | "emitter"
-    | "noiseFill";
+    | "noiseFill"
+    | "carveRect"
+    | "carveDisk"
+    | "carveTunnel";
   seed?: number;
   z?: number;
 };
@@ -153,6 +157,28 @@ export type OpNoiseFill = SDLOpBase & {
   scale?: number; // noise scale
 };
 
+export type OpCarveRect = SDLOpBase & {
+  type: "carveRect";
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+export type OpCarveDisk = SDLOpBase & {
+  type: "carveDisk";
+  cx: number;
+  cy: number;
+  r: number;
+};
+
+export type OpCarveTunnel = SDLOpBase & {
+  type: "carveTunnel";
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  thickness?: number;
+};
+
 export type SDLOp =
   | OpFill
   | OpOverlay
@@ -164,7 +190,10 @@ export type SDLOp =
   | OpStream
   | OpStructure
   | OpEmitter
-  | OpNoiseFill;
+  | OpNoiseFill
+  | OpCarveRect
+  | OpCarveDisk
+  | OpCarveTunnel;
 
 export type SDLLayer = {
   name?: string;

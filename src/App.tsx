@@ -67,12 +67,10 @@ export default function App() {
         </footer>
       </aside>
       <main className="stage">
+        {/* SceneRoute acts as a loader that applies scenes to the global engine */}
+        <SceneRoute />
         <div className="viewport">
-          {location.hash.startsWith("#/scenes/") ? (
-            <SceneRoute />
-          ) : (
-            <CanvasView />
-          )}
+          <CanvasView />
         </div>
       </main>
     </div>

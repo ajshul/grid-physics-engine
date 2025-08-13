@@ -24,6 +24,7 @@ export const MATERIALS = [
   registry[P.GLASS]!,
   registry[P.MUD]!,
   registry[P.EMBER]!,
+  registry[P.BEDROCK]!,
 ];
 
 export const COLORS = [0, ...MATERIALS.map((m) => m.color)];

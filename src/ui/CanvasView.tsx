@@ -9,11 +9,15 @@ export default function CanvasView() {
   const engineRef = useRef<Engine | null>(null);
 
   useEffect(() => {
-    const W = 320;
-    const H = 200; // tune
-    const engine = new Engine({ w: W, h: H });
+    const VIEW_W = 320;
+    const VIEW_H = 200; // tune
+    const WORLD_W = VIEW_W * 2; // exactly two screens wide
+    const WORLD_H = VIEW_H;
+    const engine = new Engine({ w: WORLD_W, h: WORLD_H });
+    engine.viewW = VIEW_W;
+    engine.viewH = VIEW_H;
     // Spawn player near top-center
-    const px = (W / 2) | 0;
+    const px = 8; // start near the left edge
     const py = 10;
     engine.spawnPlayer(px, py);
     engineRef.current = engine;
@@ -21,9 +25,9 @@ export default function CanvasView() {
     useStore.setState({ engine });
     const cvs = canvasRef.current!;
     const ctx = cvs.getContext("2d")!;
-    cvs.width = W;
-    cvs.height = H;
-    const id = ctx.createImageData(W, H);
+    cvs.width = VIEW_W;
+    cvs.height = VIEW_H;
+    const id = ctx.createImageData(VIEW_W, VIEW_H);
     const pal = makePalette(COLORS);
 
     let acc = 0;
@@ -45,8 +49,12 @@ export default function CanvasView() {
         id,
         { mat: front.mat, temp: front.temp, pressure: front.pressure },
         pal,
-        W,
-        H,
+        VIEW_W,
+        VIEW_H,
+        engine.grid.w,
+        engine.grid.h,
+        engine.cameraX,
+        engine.cameraY,
         engine.dirty,
         engine.chunkSize,
         overlay
@@ -54,8 +62,8 @@ export default function CanvasView() {
       // Draw player overlay and HUD
       if (engine.player) {
         const p = engine.player;
-        const px = Math.floor(p.x);
-        const py = Math.floor(p.y);
+        const px = Math.floor(p.x - engine.cameraX);
+        const py = Math.floor(p.y - engine.cameraY);
         // stickman: larger and colored (8-10px tall, multi-color)
         const outline = "#000000";
         const skin = "#f2cda0";
@@ -118,22 +126,26 @@ export default function CanvasView() {
 
     const onDrag = (e: PointerEvent) => {
       const rect = cvs.getBoundingClientRect();
-      const x = Math.floor(((e.clientX - rect.left) / rect.width) * W);
-      const y = Math.floor(((e.clientY - rect.top) / rect.height) * H);
+      const vx = Math.floor(((e.clientX - rect.left) / rect.width) * VIEW_W);
+      const vy = Math.floor(((e.clientY - rect.top) / rect.height) * VIEW_H);
+      const x = vx + engine.cameraX;
+      const y = vy + engine.cameraY;
       const { selected, brush } = useStore.getState();
       engine.paint(x, y, selected, brush);
     };
     const onMove = (e: PointerEvent) => {
       const rect = cvs.getBoundingClientRect();
-      let x = Math.floor(((e.clientX - rect.left) / rect.width) * W);
-      let y = Math.floor(((e.clientY - rect.top) / rect.height) * H);
-      if (Number.isNaN(x) || Number.isNaN(y)) return;
-      if (x < 0) x = 0;
-      if (y < 0) y = 0;
-      if (x >= W) x = W - 1;
-      if (y >= H) y = H - 1;
+      let vx = Math.floor(((e.clientX - rect.left) / rect.width) * VIEW_W);
+      let vy = Math.floor(((e.clientY - rect.top) / rect.height) * VIEW_H);
+      if (Number.isNaN(vx) || Number.isNaN(vy)) return;
+      if (vx < 0) vx = 0;
+      if (vy < 0) vy = 0;
+      if (vx >= VIEW_W) vx = VIEW_W - 1;
+      if (vy >= VIEW_H) vy = VIEW_H - 1;
+      const x = vx + engine.cameraX;
+      const y = vy + engine.cameraY;
       const front = engine.grid.frontIsA ? engine.grid.a : engine.grid.b;
-      const i = y * W + x;
+      const i = y * engine.grid.w + x;
       useStore.setState({
         hovered: {
           x,

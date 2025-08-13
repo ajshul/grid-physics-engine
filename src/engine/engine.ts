@@ -3,6 +3,7 @@ import { mulberry32 } from "./rng";
 import { registry } from "./materials";
 import { createDefaultPipeline, PassPipeline } from "./pipeline";
 import { Player } from "./player";
+import { getMaterialIdByName } from "./utils";
 import {
   AMBIENT_TEMPERATURE_C,
   ICE_INIT_TEMP_BELOW_C,
@@ -30,6 +31,10 @@ export class Engine {
   dt = 1 / 60;
   private pipeline: PassPipeline;
   player: Player | null = null;
+  cameraX = 0; // left of viewport in world cells
+  cameraY = 0;
+  viewW = 320;
+  viewH = 200;
 
   constructor(opts: EngineOptions) {
     this.opts = opts;
@@ -37,10 +42,13 @@ export class Engine {
     this.rand = mulberry32(this.opts.seed ?? 1337);
     this.dt = typeof opts.dt === "number" && opts.dt > 0 ? opts.dt : 1 / 60;
     this.pipeline = createDefaultPipeline();
+    // initialize bedrock bottom row
+    this.ensureBedrockBottom();
   }
 
   paint(x: number, y: number, materialId: number, radius = 3): void {
     const g = front(this.grid);
+    const bedrockId = getMaterialIdByName("Bedrock") ?? -1;
     for (let dy = -radius; dy <= radius; dy++) {
       for (let dx = -radius; dx <= radius; dx++) {
         const px = x + dx;
@@ -48,7 +56,10 @@ export class Engine {
         if (dx * dx + dy * dy > radius * radius) continue;
         if (px < 0 || py < 0 || px >= this.grid.w || py >= this.grid.h)
           continue;
+        // do not modify bedrock row or bedrock cells
+        if (py === this.grid.h - 1) continue;
         const i = (py * this.grid.w + px) | 0;
+        if (g.mat[i] === bedrockId) continue;
         const prevId = g.mat[i] | 0;
         g.mat[i] = materialId;
         // set reasonable initial temperature based on material and locally cool/heat
@@ -126,6 +137,7 @@ export class Engine {
     // Update player after world state is finalized for this frame
     if (this.player) {
       this.player.step(this);
+      this.updateCameraAndWorldBounds();
     }
   }
 
@@ -145,6 +157,8 @@ export class Engine {
       v.humidity.fill(0);
       v.phase.fill(0);
     }
+    // Reinstate bedrock bottom row after clearing
+    this.ensureBedrockBottom();
     // mark all chunks dirty so the next blit fully redraws
     this.dirty.clear();
     const chunksX = Math.ceil(w / this.chunkSize);
@@ -161,6 +175,28 @@ export class Engine {
     const p = new Player(x, y);
     this.player = p;
     return p;
+  }
+
+  private updateCameraAndWorldBounds(): void {
+    const p = this.player;
+    if (!p) return;
+    // Camera follows player horizontally, clamped to world
+    const target = Math.floor(p.x - this.viewW * 0.4);
+    const maxCam = Math.max(0, this.grid.w - this.viewW);
+    this.cameraX = Math.max(0, Math.min(maxCam, target));
+    this.cameraY = 0;
+  }
+
+  /** Fill bottom row with Bedrock and prevent modifications. */
+  ensureBedrockBottom(): void {
+    const { w, h } = this.grid;
+    const g = front(this.grid);
+    const bid = getMaterialIdByName("Bedrock") ?? 0;
+    if (!bid) return;
+    const row = (h - 1) * w;
+    for (let x = 0; x < w; x++) g.mat[row + x] = bid;
+    const gb = back(this.grid);
+    gb.mat.set(g.mat);
   }
 }
 

@@ -199,3 +199,11 @@ export const GLASS = define({
   meltingPoint: 700,
   conductivity: 0.3,
 });
+
+export const BEDROCK = define({
+  name: "Bedrock",
+  color: 0x111111,
+  category: CAT.SOLID,
+  density: 10.0,
+  conductivity: 0.05,
+});

@@ -11,57 +11,43 @@ export function blit(
   imageData: ImageData,
   grid: GridForBlit,
   palette: Uint32Array,
-  w: number,
-  h: number,
-  dirtyChunks: Set<number>,
-  chunkSize = 64,
+  viewW: number,
+  viewH: number,
+  worldW: number,
+  worldH: number,
+  viewX: number,
+  viewY: number,
+  _dirtyChunks: Set<number>,
+  _chunkSize = 64,
   overlay: OverlayKind = "none"
 ): void {
   const data = new Uint32Array(imageData.data.buffer);
-  // Overlays depend on temperature/pressure values that can change without
-  // material movement. To avoid stale visuals, force a full redraw when any
-  // overlay is active.
-  const fullRedraw =
-    overlay !== "none" ||
-    dirtyChunks.size === 0 ||
-    dirtyChunks.size > ((w * h) / (chunkSize * chunkSize)) * 0.6;
-  if (fullRedraw) {
-    drawRect(0, 0, w, h);
-  } else {
-    for (const key of dirtyChunks) {
-      const cx = key & 0xffff;
-      const cy = key >>> 16;
-      const x0 = cx * chunkSize;
-      const y0 = cy * chunkSize;
-      const x1 = Math.min(w, x0 + chunkSize);
-      const y1 = Math.min(h, y0 + chunkSize);
-      drawRect(x0, y0, x1 - x0, y1 - y0);
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
-
-  function drawRect(x0: number, y0: number, width: number, height: number) {
-    const { mat, temp, pressure } = grid;
-    const x1 = x0 + width;
-    const y1 = y0 + height;
-    for (let y = y0; y < y1; y++) {
-      const row = y * w;
-      for (let x = x0; x < x1; x++) {
-        const i = row + x;
-        const base = palette[mat[i]] || 0x00000000;
-        if (overlay === "none") {
-          data[i] = base;
-          continue;
-        }
-        const ov = overlayColor(overlay, temp[i], pressure[i]);
-        data[i] = blendABGR(
+  // Always redraw the viewport; it is relatively small.
+  const { mat, temp, pressure } = grid;
+  for (let yv = 0; yv < viewH; yv++) {
+    const yw = yv + viewY;
+    if (yw < 0 || yw >= worldH) continue;
+    const rowView = yv * viewW;
+    const rowWorld = yw * worldW;
+    for (let xv = 0; xv < viewW; xv++) {
+      const xw = xv + viewX;
+      if (xw < 0 || xw >= worldW) continue;
+      const iWorld = rowWorld + xw;
+      const iView = rowView + xv;
+      const base = palette[mat[iWorld]] || 0x00000000;
+      if (overlay === "none") {
+        data[iView] = base;
+      } else {
+        const ov = overlayColor(overlay, temp[iWorld], pressure[iWorld]);
+        data[iView] = blendABGR(
           base,
           ov,
-          overlayAlpha(overlay, temp[i], pressure[i])
+          overlayAlpha(overlay, temp[iWorld], pressure[iWorld])
         );
       }
     }
   }
+  ctx.putImageData(imageData, 0, 0);
 }
 
 export function makePalette(colors: number[]): Uint32Array {

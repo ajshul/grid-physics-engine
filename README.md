@@ -104,6 +104,7 @@ src/
 Tuning constants live in `src/engine/player_constants.ts` (movement, gravity, buoyancy, gas lift, rubber bounce, fall-through timings, powder rise, and collision extents).
 
 Known limitations:
+
 - Extremely deep/wide powder piles may not fully fluidize around the player yet. See the skipped tests in `src/tests/player_powder_movement.test.ts` for the current expected behavior; planned improvements will move displacement into powder/liquid passes for better realism.
 
 Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressure decay/diffusion, impulse blend) live in `src/engine/constants.ts`.

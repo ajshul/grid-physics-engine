@@ -102,6 +102,7 @@ function explode(
   const smokeId = getMaterialIdByName("Smoke");
   const fireId = getMaterialIdByName("Fire");
   const rubbleId = getMaterialIdByName("Rubble");
+  const bedrockId = getMaterialIdByName("Bedrock");
   for (let dy = -r; dy <= r; dy++) {
     for (let dx = -r; dx <= r; dx++) {
       if (dx * dx + dy * dy > r * r) continue;
@@ -109,6 +110,8 @@ function explode(
       const py = cy + dy;
       if (px < 1 || py < 1 || px >= w - 1 || py >= h - 1) continue;
       const i = py * w + px;
+      // Do not modify bedrock cells
+      if (typeof bedrockId === "number" && M[i] === bedrockId) continue;
       M[i] = smokeId ?? 0;
       if (fireId && Math.hypot(dx, dy) < r * 0.6) M[i] = fireId;
       T[i] = Math.max(T[i], EXPLOSION_HEAT_C);
@@ -124,7 +127,11 @@ function explode(
         engine.rand() < EXPLOSION_SHRAPNEL_CHANCE
       ) {
         const mid = M[i];
-        if (registry[mid]?.category === CAT.SOLID) M[i] = rubbleId;
+        if (
+          registry[mid]?.category === CAT.SOLID &&
+          (typeof bedrockId !== "number" || mid !== bedrockId)
+        )
+          M[i] = rubbleId;
       }
       engine.markDirty(px, py);
     }

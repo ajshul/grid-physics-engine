@@ -22,6 +22,13 @@ This README summarizes how to run the project, the architecture, materials and i
 - Preview build: `npm run preview`
 - Tests (Vitest): `npm run test`
 
+### Scenes (SDL)
+
+- Build all scenes from YAML/JSON5: `pnpm build:scenes`
+- Preview a scene in-app: run the dev server and open a hash route like `#/scenes/Campfire-Containment`
+  - Available examples: `Campfire-Containment`, `Forest-Wildfire`, `Laboratory-Spill`, `Supply-Delivery`, `Crisis-Coordination`
+- See `docs/scene-language.md` for the Scene Design Language (SDL) specification and examples.
+
 ## Controls
 
 - Left click: paint with the selected material
@@ -67,6 +74,15 @@ src/
         gas.ts          # gases rise/diffuse/vent/dissipate
         energy.ts       # fire: ignite/heat/quench/foam-suppress
         object.ts       # bombs/meteors; deterministic fuse/explosion
+  scene/
+    sdl.types.ts       # SDL TypeScript types and compiler output
+    sdl.schema.ts      # Zod schema for YAML/JSON5 validation
+    sdl.materials.ts   # SDL name → engine material id mapping
+    sdl.noise.ts       # deterministic noise helpers
+    sdl.ops.ts         # declarative drawing ops (fill/overlay/...)
+    sdl.compiler.ts    # parse/validate/compile SDL → tiles/entities/emitters
+    scene.preview.tsx  # React preview using existing renderer
+    SceneRoute.tsx     # hash route loader for `#/scenes/:name`
   render/
     painter.ts          # viewport blit + palette + overlays (temp/pressure)
     palette.ts          # palette from materials
@@ -77,6 +93,11 @@ src/
      Palette.tsx         # material selection grid + overlay toggle + compact inspector
    tests/
      *.test.ts           # determinism, first-principles physics, pressure, overlays, humidity, category rules
+scripts/
+  build-scenes.ts       # CLI to validate+compile all scenes to JSON
+public/
+  scenes/               # source SDL files (*.yaml)
+  scenes-compiled/      # compiled scene JSON outputs (generated)
 ```
 
 ## Player and Engine Overview
@@ -126,6 +147,8 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
 - Energy: Fire
 - Objects: Bomb, Meteor, Ball
 
+Additional scene props/materials used by SDL examples: Dirt, Grass, Bush, Reed, Leaf, WoodenPlank, Thatch, TileFloor, SteelWall, SteelGirder, Ladder, StoneBrick, SteelGrating, Log, Crate, SteelBarrel, PurpleChem.
+
 ## Interactions (Selected)
 
 - Water + Lava → Stone + Steam (heats area; conversion may occur after brief heating and has precedence once hot)
@@ -166,6 +189,7 @@ For a detailed first-principles specification, see `./Engine_Guide.md`.
 - Determinism test: identical state hashes given seed after N steps
 - Rules tests: powder fall, basic flows, gas rise
 - Interaction tests: foam suppression; lava ignites wood/oil before cooling; water+lava reaction observed in a neighborhood
+- SDL tests: schema validation (`src/tests/scene.schema.test.ts`)
 
 Run: `npm run test`
 

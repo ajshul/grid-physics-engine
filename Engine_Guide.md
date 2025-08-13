@@ -55,6 +55,8 @@ Double buffering (`a` and `b`) ensures “read front, write back, then swap” e
 
 Implemented via `PassPipeline` (`engine/pipeline.ts`). Each pass writes to the back buffer and uses write-guards to minimize cross-pass clobbering. The order avoids write conflicts and reflects physical causality (pressure → motion → reactions → thermal).
 
+Note: Scene loading via SDL does not alter pass order or physics semantics. Scenes are compiled into initial grid tiles/entities/emitter metadata and then fed to the engine as an initial state.
+
 ---
 
 ## Pressure Model
@@ -129,6 +131,8 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 - Energy: Fire, Ember
 - Objects: Bomb, Meteor, Ball
 
+Additional scene-oriented props/materials available to SDL (defined in `materials/presets.ts`): Dirt, Grass, Bush, Reed, Leaf, WoodenPlank, Thatch, TileFloor, SteelWall, SteelGirder, Ladder, StoneBrick, SteelGrating, Log, Crate, SteelBarrel, PurpleChem. These reuse existing category rules and thermal/pressure models.
+
 ---
 
 ## Category Rules
@@ -179,6 +183,10 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 Renderer paints a viewport window via palette. The canvas shows a horizontal scrolling view into the world; the camera follows the player and clamps at world bounds. When temperature/pressure overlays are enabled, the viewport is fully redrawn each tick to ensure overlays reflect current field values without stale regions.
 
+### Scene Preview
+
+The app includes a simple preview route for compiled scenes. Navigate to `#/scenes/:name` (e.g., `#/scenes/Campfire-Containment`) to load `public/scenes/:name.yaml`, compile it, and render using the existing engine and painter.
+
 - Overlays: temperature (blue→red around ambient) and pressure (static+impulse blended). Their alpha scales with magnitude.
 
 ### World Dimensions and Camera
@@ -216,6 +224,7 @@ Coverage (selected):
 - Thermal fundamentals: ambient cooling; latent heat melt; boiling delayed by pressure
 - Energy interactions: ignition/suppression; burnout to ember/ash; bomb impulse
 - Acid etching
+- SDL schema validation (scene-language): minimal sanity checks for the YAML format
 
 All tests should pass deterministically under the default `dt`.
 

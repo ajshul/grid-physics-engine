@@ -231,7 +231,7 @@ export class Player {
                 if (baseIdx < 0 || baseIdx >= w * h) return false;
                 const cat = registry[g.mat[baseIdx]]?.category;
                 if (cat !== "powder" && cat !== "liquid") return false;
-                const maxScan = 12;
+                const maxScan = Math.min(engine.grid.h, 128);
                 let top = baseIdx;
                 for (let n = 1; n <= maxScan; n++) {
                   const cand = baseIdx - n * w;
@@ -252,8 +252,30 @@ export class Player {
                 return true;
               };
               const bases = [iC, iL, iR];
-              for (const b of bases) {
-                tryLiftColumn(b);
+              for (let rep = 0; rep < 2; rep++) {
+                for (const b of bases) {
+                  if (!tryLiftColumn(b)) {
+                    const left = b + w - 1;
+                    const right = b + w + 1;
+                    if (
+                      left >= 0 &&
+                      left < w * h &&
+                      (g.mat[left] === 0 || registry[g.mat[left]]?.category === "gas") &&
+                      (registry[g.mat[b]]?.category === "powder" || registry[g.mat[b]]?.category === "liquid")
+                    ) {
+                      copyFromTo(b, left);
+                      clearCell(b);
+                    } else if (
+                      right >= 0 &&
+                      right < w * h &&
+                      (g.mat[right] === 0 || registry[g.mat[right]]?.category === "gas") &&
+                      (registry[g.mat[b]]?.category === "powder" || registry[g.mat[b]]?.category === "liquid")
+                    ) {
+                      copyFromTo(b, right);
+                      clearCell(b);
+                    }
+                  }
+                }
               }
             } else {
               this.y = ny;
@@ -292,7 +314,8 @@ export class Player {
                 };
                 const tryLiftAbove = (baseIdx: number) => {
                   if (baseIdx < 0 || baseIdx >= w * h) return false;
-                  if (registry[g.mat[baseIdx]]?.category !== "powder") return false;
+                  if (registry[g.mat[baseIdx]]?.category !== "powder")
+                    return false;
                   const maxScan = 12;
                   let top = baseIdx;
                   for (let n = 1; n <= maxScan; n++) {
@@ -315,7 +338,8 @@ export class Player {
                 const heads = [iC, iL, iR];
                 let lifted = false;
                 for (const b of heads) lifted = tryLiftAbove(b) || lifted;
-                if (lifted) this.y = ny; else {
+                if (lifted) this.y = ny;
+                else {
                   this.y = tyTop + headOffset + PLAYER_HEAD_CLEARANCE_EPS;
                   this.vy = 0;
                 }
@@ -425,4 +449,3 @@ export class Player {
     return !!m && m.category === "liquid";
   }
 }
-

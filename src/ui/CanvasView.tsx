@@ -11,7 +11,7 @@ export default function CanvasView() {
   useEffect(() => {
     const VIEW_W = 320;
     const VIEW_H = 200; // tune
-    const WORLD_W = VIEW_W * 2; // exactly two screens wide
+    const WORLD_W = 480; // initial narrow world, will expand to the right
     const WORLD_H = VIEW_H;
     const engine = new Engine({ w: WORLD_W, h: WORLD_H });
     engine.viewW = VIEW_W;

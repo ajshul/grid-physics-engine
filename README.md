@@ -23,6 +23,12 @@ This README summarizes how to run the project, the architecture, materials and i
 ## Controls
 
 - Left click: paint with the selected material
+- Player:
+  - Move: Arrow Left/Right or A/D
+  - Jump/Up: Arrow Up, W, or Space
+  - Drop through powders/liquids: hold Arrow Down or S briefly to fall through
+  - Rise out of powders: hold Jump/Up while buried to push up and surface
+  - Respawn: R
 - Sidebar:
   - Brush: set brush radius with the slider
   - Speed: simulation speed multiplier
@@ -30,7 +36,6 @@ This README summarizes how to run the project, the architecture, materials and i
   - Step: advance one frame (when paused)
   - Clear: reset the world to ambient
   - Overlay: None / Temperature / Pressure
-  - CRT: removed
 
 Planned (see TODO.md): additional tools (line/rect/fill/eyedropper/fan/heater/cooler), expanded inspector, save/load/undo.
 
@@ -72,7 +77,7 @@ src/
      *.test.ts           # determinism, first-principles physics, pressure, overlays, humidity, category rules
 ```
 
-## Engine Overview
+## Player and Engine Overview
 
 - Double buffer step: read Front, write Back, then swap
 - Update order per frame (via PassPipeline): Pressure → Powder → Liquid → Gas → Energy → Objects → Chemistry → Thermal/Reactions
@@ -81,6 +86,22 @@ src/
   - Empty space is strongly coupled to ambient to prevent residual heat; overlays redraw the full frame each tick to avoid stale visualization
 - Reactions: water+lava→stone+steam (brief heat gating, then precedence); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets; lava preheats/ignites nearby oil/wood before it cools to stone
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
+
+### Player Physics and Interactions
+
+- Rendering: a larger stickman is drawn as an overlay each frame, and a labeled HEALTH bar appears top-left.
+- Movement: fast ground acceleration, air control, friction, strong gravity and capped fall speed. Quick-turn boost for snappy reversals.
+- Grounding: samples a 3-pixel "feet" row and snaps flush to surfaces; prevents sinking into solids.
+- Rubber: landing on Rubber bounces the player upward (speed-based).
+- Powders:
+  - Stand on top by default (treated as ground).
+  - Hold Down to drop through (with a short required hold and cooldown).
+  - While buried, hold Up/Jump to rise out; nearby powder is displaced upward one cell when space exists.
+- Liquids (Water, Foam, Acid): buoyancy lifts; horizontal drag applies; press Jump for a small upward boost; hold Down to dive.
+- Gases (Smoke, Steam): upward lift and drift with local gas velocity hints; upward speed is capped.
+- Fire and Lava: ignite and cause damage over time; Water/Foam quench. Health slowly recovers while cooled in Water/Foam.
+
+Tuning constants live in `src/engine/player_constants.ts` (movement, gravity, buoyancy, gas lift, rubber bounce, fall-through timings, and collision extents).
 
 Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressure decay/diffusion, impulse blend) live in `src/engine/constants.ts`.
 

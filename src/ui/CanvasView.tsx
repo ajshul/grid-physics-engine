@@ -106,6 +106,11 @@ export default function CanvasView() {
         ctx.fillRect(6, 6, wBar, hBar);
         ctx.fillStyle = p.burning ? "#ff3b1a" : "#2afc6e";
         ctx.fillRect(6, 6, Math.floor(wBar * hpFrac), hBar);
+        // label
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "10px PressStart, monospace";
+        ctx.textBaseline = "top";
+        ctx.fillText("HEALTH", 6, 6 + hBar + 3);
       }
       raf = requestAnimationFrame(loop);
     };

@@ -210,6 +210,63 @@ export class Player {
               this.y = ny;
               this.onGround = false;
               this.dropCooldown = PLAYER_CROUCH_DROP_COOLDOWN;
+              // displace powders/liquids below by nudging them down one cell when possible
+              const indices = [iL, iC, iR];
+              const g = grid;
+              const swapCells = (a: number, b: number) => {
+                const M = g.mat;
+                const T = g.temp;
+                const VX = g.velX;
+                const VY = g.velY;
+                const F = g.flags;
+                const P = g.pressure;
+                const I = g.impulse;
+                const AUX = g.aux;
+                const HUM = g.humidity;
+                const PH = g.phase;
+                const m = M[a];
+                M[a] = M[b];
+                M[b] = m;
+                const t = T[a];
+                T[a] = T[b];
+                T[b] = t;
+                const vx = VX[a];
+                VX[a] = VX[b];
+                VX[b] = vx;
+                const vy = VY[a];
+                VY[a] = VY[b];
+                VY[b] = vy;
+                const f = F[a];
+                F[a] = F[b];
+                F[b] = f;
+                const p = P[a];
+                P[a] = P[b];
+                P[b] = p;
+                const imp = I[a];
+                I[a] = I[b];
+                I[b] = imp;
+                const aux = AUX[a];
+                AUX[a] = AUX[b];
+                AUX[b] = aux;
+                const hum = HUM[a];
+                HUM[a] = HUM[b];
+                HUM[b] = hum;
+                const ph = PH[a];
+                PH[a] = PH[b];
+                PH[b] = ph;
+              };
+              for (const k of indices) {
+                if (k < 0 || k >= w * h) continue;
+                const id = g.mat[k];
+                const cat = registry[id]?.category;
+                if (cat !== "powder" && cat !== "liquid") continue;
+                const below = k + w;
+                if (below >= 0 && below < w * h) {
+                  const belowId = g.mat[below];
+                  const belowCat = registry[belowId]?.category;
+                  if (belowId === 0 || belowCat === "gas") swapCells(k, below);
+                }
+              }
             } else {
               this.y = ny;
               this.onGround = false;
@@ -223,9 +280,85 @@ export class Player {
             const hitL = iL >= 0 && iL < w * h && this.isBlocking(grid.mat[iL]);
             const hitC = iC >= 0 && iC < w * h && this.isBlocking(grid.mat[iC]);
             const hitR = iR >= 0 && iR < w * h && this.isBlocking(grid.mat[iR]);
+            const powderAhead = [iL, iC, iR].some(
+              (k) => registry[grid.mat[k]]?.category === "powder"
+            );
             if (hitL || hitC || hitR) {
-              this.y = tyTop + headOffset + PLAYER_HEAD_CLEARANCE_EPS;
-              this.vy = 0;
+              if (powderAhead && this.input.jump) {
+                // attempt to displace powder upward to rise out
+                const g = grid;
+                const indices = [iL, iC, iR];
+                const tryMoveUp = (idx: number) => {
+                  if (idx < 0 || idx >= w * h) return false;
+                  const id = g.mat[idx];
+                  if (registry[id]?.category !== "powder") return false;
+                  const above = idx - w;
+                  if (above >= 0) {
+                    const aboveId = g.mat[above];
+                    const aboveCat = registry[aboveId]?.category;
+                    if (aboveId === 0 || aboveCat === "gas") {
+                      // swap powder upward one cell
+                      const swap = (a: number, b: number) => {
+                        const M = g.mat;
+                        const T = g.temp;
+                        const VX = g.velX;
+                        const VY = g.velY;
+                        const F = g.flags;
+                        const P = g.pressure;
+                        const I = g.impulse;
+                        const AUX = g.aux;
+                        const HUM = g.humidity;
+                        const PH = g.phase;
+                        const m = M[a];
+                        M[a] = M[b];
+                        M[b] = m;
+                        const t = T[a];
+                        T[a] = T[b];
+                        T[b] = t;
+                        const vx = VX[a];
+                        VX[a] = VX[b];
+                        VX[b] = vx;
+                        const vy = VY[a];
+                        VY[a] = VY[b];
+                        VY[b] = vy;
+                        const f = F[a];
+                        F[a] = F[b];
+                        F[b] = f;
+                        const p = P[a];
+                        P[a] = P[b];
+                        P[b] = p;
+                        const imp = I[a];
+                        I[a] = I[b];
+                        I[b] = imp;
+                        const aux = AUX[a];
+                        AUX[a] = AUX[b];
+                        AUX[b] = aux;
+                        const hum = HUM[a];
+                        HUM[a] = HUM[b];
+                        HUM[b] = hum;
+                        const ph = PH[a];
+                        PH[a] = PH[b];
+                        PH[b] = ph;
+                      };
+                      swap(idx, above);
+                      return true;
+                    }
+                  }
+                  return false;
+                };
+                let moved = false;
+                for (const k of indices) moved = tryMoveUp(k) || moved;
+                if (moved) {
+                  // now allow moving up into freed space
+                  this.y = ny;
+                } else {
+                  this.y = tyTop + headOffset + PLAYER_HEAD_CLEARANCE_EPS;
+                  this.vy = 0;
+                }
+              } else {
+                this.y = tyTop + headOffset + PLAYER_HEAD_CLEARANCE_EPS;
+                this.vy = 0;
+              }
             } else {
               this.y = ny;
             }

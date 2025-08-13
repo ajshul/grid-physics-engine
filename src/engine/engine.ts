@@ -1,4 +1,4 @@
-import { createGrid, front, back, swap, expandGridWidth } from "./grid";
+import { createGrid, front, back, swap } from "./grid";
 import { mulberry32 } from "./rng";
 import { registry } from "./materials";
 import { createDefaultPipeline, PassPipeline } from "./pipeline";
@@ -180,14 +180,6 @@ export class Engine {
   private updateCameraAndWorldBounds(): void {
     const p = this.player;
     if (!p) return;
-    // Expand world to the right as player approaches the right edge of current world
-    const margin = 20;
-    if (p.x > this.grid.w - margin - 1) {
-      const growBy = Math.max(this.viewW, 64);
-      expandGridWidth(this.grid, this.grid.w + growBy);
-      // ensure bottom bedrock after expansion
-      this.ensureBedrockBottom();
-    }
     // Camera follows player horizontally, clamped to world
     const target = Math.floor(p.x - this.viewW * 0.4);
     const maxCam = Math.max(0, this.grid.w - this.viewW);

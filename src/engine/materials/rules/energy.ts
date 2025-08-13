@@ -11,8 +11,9 @@ import {
   EMBER,
   WOOD,
   ASH,
+  DUST,
 } from "../presets";
-import { getMaterialIdByName } from "../../utils";
+// getMaterialIdByName no longer needed; use preset ids directly
 import {
   FIRE_INIT_TEMP_C,
   FIRE_NEIGHBOR_HEAT_DROP_C,
@@ -65,8 +66,8 @@ export function stepEnergy(
   const VX = write.velX;
   const canWrite = (idx: number): boolean => W[idx] === R[idx];
 
-  // const ASH = getMaterialIdByName("Ash"); // reserved for future use in burnout/ash logic
-  const DUST = getMaterialIdByName("Dust");
+  // Use preset ids to avoid repeated name lookups
+  const DUST_ID = DUST;
 
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
@@ -85,7 +86,11 @@ export function stepEnergy(
           continue;
         }
         // ignite dust on contact occasionally
-        if (typeof DUST === "number" && R[below] === DUST && canWrite(below)) {
+        if (
+          typeof DUST_ID === "number" &&
+          R[below] === DUST_ID &&
+          canWrite(below)
+        ) {
           if (rand() < EMBER_IGNITE_DUST_CHANCE) {
             W[below] = FIRE;
             VX[below] = 0 as any;
@@ -319,18 +324,14 @@ export function stepEnergy(
           W[i] = EMBER;
           T[i] = Math.min(T[i], 260);
           // chance to spawn ash in a neighbor empty cell
-          const ASH = getMaterialIdByName("Ash");
           if (ASH) {
             const k = [i - 1, i + 1, i - w, i + w][(rand() * 4) | 0];
             if (W[k] === 0 && canWrite(k) && rand() < 0.3) W[k] = ASH as any;
           }
         } else {
-          // default burnout: smoke unless clearly wood-origin
-          W[i] = SMOKE;
-          T[i] = Math.max(
-            SMOKE_TEMP_CLAMP_MIN_C,
-            Math.min(T[i], SMOKE_TEMP_CLAMP_MAX_C)
-          );
+          // default burnout: prefer ember on unknown origin to avoid misclassifying wood as smoke
+          W[i] = EMBER;
+          T[i] = Math.min(T[i], 260);
         }
       }
       // If surrounded by cold non-flammable materials, shorten lifetime slightly
@@ -359,14 +360,14 @@ export function stepEnergy(
       }
 
       // Dust flash hazard: if nearby density of dust is high, flash to smoke/ash with a small impulse bump
-      if (DUST) {
+      if (DUST_ID) {
         let dustCount = 0;
-        for (const j of n) if (R[j] === DUST) dustCount++;
+        for (const j of n) if (R[j] === DUST_ID) dustCount++;
         if (
           dustCount >= DUST_FLASH_DENSITY_THRESHOLD &&
           rand() < DUST_FLASH_PROB
         ) {
-          for (const j of n) if (R[j] === DUST) W[j] = SMOKE;
+          for (const j of n) if (R[j] === DUST_ID) W[j] = SMOKE;
           // small local impulse bump
           const { w: Ww } = engine.grid;
           IMP[i] = Math.max(IMP[i], DUST_FLASH_IMPULSE_CENTER);

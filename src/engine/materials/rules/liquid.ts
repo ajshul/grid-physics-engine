@@ -18,6 +18,7 @@ import {
   WATER_MOVE_INTO_HOT_GAS_COOL_DELTA_C,
   WATER_MOVE_COOL_MIN_TEMP_C,
 } from "../../constants";
+import { isImmiscible } from "../cache";
 
 export function stepLiquid(
   engine: Engine,
@@ -150,9 +151,7 @@ export function stepLiquid(
         (m.density ?? 0) > (belowMat.density ?? 0)
       ) {
         // heavier sinks; respect immiscibility by requiring stronger drive
-        const imm =
-          (m.immiscibleWith && m.immiscibleWith.includes(belowMat.name)) ||
-          (belowMat.immiscibleWith && belowMat.immiscibleWith.includes(m.name));
+        const imm = isImmiscible(id, R[below]);
         const densDelta = (m.density ?? 0) - (belowMat.density ?? 0);
         if (
           (!imm ||
@@ -174,9 +173,7 @@ export function stepLiquid(
         (m.density ?? 0) < (aboveMat.density ?? 0)
       ) {
         // lighter rises; respect immiscibility
-        const imm =
-          (m.immiscibleWith && m.immiscibleWith.includes(aboveMat.name)) ||
-          (aboveMat.immiscibleWith && aboveMat.immiscibleWith.includes(m.name));
+        const imm = isImmiscible(id, R[above]);
         const densDelta = (aboveMat.density ?? 0) - (m.density ?? 0);
         if (
           (!imm ||

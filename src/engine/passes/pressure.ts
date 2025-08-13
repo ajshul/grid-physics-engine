@@ -2,6 +2,7 @@ import type { Engine } from "../engine";
 import type { GridView } from "../grid";
 import { registry } from "../materials";
 import { CAT } from "../materials/categories";
+import { clamp16, stepTowardZero } from "../utils";
 import {
   STATIC_PRESSURE_DECAY_PER_STEP,
   IMPULSE_DECAY_PER_STEP,
@@ -81,16 +82,4 @@ export function computePressure(
     const eff = ((P[i] | 0) + (I[i] | 0) * IMPULSE_BLEND_FACTOR) | 0;
     P[i] = clamp16(eff);
   }
-}
-
-function clamp16(v: number): number {
-  if (v > 32767) return 32767;
-  if (v < -32768) return -32768;
-  return v | 0;
-}
-
-function stepTowardZero(v: number): number {
-  if (v > 0) return v - 1;
-  if (v < 0) return v + 1;
-  return 0;
 }

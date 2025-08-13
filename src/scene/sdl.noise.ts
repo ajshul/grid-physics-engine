@@ -1,14 +1,5 @@
 // Simple seeded 2D value noise (fast, deterministic) — not Perlin, but adequate
 
-export function mulberry32(seed: number) {
-  return function rand(): number {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 export function hash2(x: number, y: number, seed: number): number {
   let h = seed ^ (x * 374761393) ^ (y * 668265263);
   h = (h ^ (h >>> 13)) * 1274126177;

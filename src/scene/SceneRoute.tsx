@@ -11,7 +11,7 @@ function parseHash(): string | null {
 
 export default function SceneRoute() {
   const [name, setName] = useState<string | null>(() => parseHash());
-  const [err, setErr] = useState<string | null>(null);
+  const [, setErr] = useState<string | null>(null);
   const engine = useStore((s) => s.engine);
 
   useEffect(() => {
@@ -46,10 +46,6 @@ export default function SceneRoute() {
     };
   }, [engine, name]);
 
-  // Non-visual loader: render nothing; optionally surface errors in console
-  if (err) {
-    // eslint-disable-next-line no-console
-    console.error(err);
-  }
+  // Non-visual loader
   return null;
 }

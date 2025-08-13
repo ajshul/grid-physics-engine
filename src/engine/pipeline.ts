@@ -9,6 +9,7 @@ import { stepEnergy } from "./materials/rules/energy";
 import { stepObjects } from "./materials/rules/object";
 import { applyAcidEtching } from "./passes/acid";
 import { applyThermal } from "./materials/reactions";
+import { ensureMaterialCaches } from "./materials/cache";
 
 export interface EnginePass {
   name: string;
@@ -124,6 +125,8 @@ export class PassPipeline {
     write: GridView,
     rand: () => number
   ): void {
+    // Ensure material property caches are up-to-date before executing passes
+    ensureMaterialCaches();
     for (const pass of this.passes) {
       pass.execute(engine, read, write, rand);
     }

@@ -1,8 +1,8 @@
-import { registry } from "./materials";
+import { registry, nameToId } from "./materials";
 
 export function getMaterialIdByName(name: string): number | undefined {
-  const id = Object.keys(registry).find((k) => registry[+k]?.name === name);
-  return id ? +id : undefined;
+  const id = nameToId.get(name);
+  return typeof id === "number" ? id : undefined;
 }
 
 export function neighbors4(

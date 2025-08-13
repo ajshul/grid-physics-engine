@@ -1,6 +1,7 @@
 import type { Engine } from "../engine";
 import type { GridView } from "../grid";
 import { registry } from "./index";
+import { conductivityById, heatCapacityById, densityById } from "./cache";
 import {
   FIRE,
   ICE,
@@ -23,15 +24,7 @@ import {
   LAVA_SOLIDIFY_ENERGY,
   LAVA_SOLIDIFY_TEMP_C,
   CONDUCTIVITY_DEFAULT_EMPTY,
-  CONDUCTIVITY_DEFAULT_GAS,
-  CONDUCTIVITY_DEFAULT_LIQUID,
-  CONDUCTIVITY_DEFAULT_POWDER,
-  CONDUCTIVITY_DEFAULT_SOLID,
   HEAT_CAPACITY_DEFAULT_EMPTY,
-  HEAT_CAPACITY_DEFAULT_GAS,
-  HEAT_CAPACITY_DEFAULT_LIQUID,
-  HEAT_CAPACITY_DEFAULT_POWDER,
-  HEAT_CAPACITY_DEFAULT_SOLID,
   MIN_EFFECTIVE_MASS,
   BASE_COOLING_GAS_PER_SEC,
   BASE_COOLING_LIQUID_PER_SEC,
@@ -108,45 +101,11 @@ export function applyThermal(engine: Engine, write: GridView) {
   // We exchange heat between right and down neighbors only to avoid double-processing.
   // Energy flow Q = (Tj - Ti) * k_eff * dt
   // Temperature updates: dTi = Q / mass_i, dTj = -Q / mass_j
-  const getConductivity = (id: number): number => {
-    const m = registry[id];
-    if (!m) return CONDUCTIVITY_DEFAULT_EMPTY; // empty cell behaves like air
-    if (typeof m.conductivity === "number") return clamp01(m.conductivity);
-    switch (m.category) {
-      case "gas":
-        return CONDUCTIVITY_DEFAULT_GAS;
-      case "liquid":
-        return CONDUCTIVITY_DEFAULT_LIQUID;
-      case "powder":
-        return CONDUCTIVITY_DEFAULT_POWDER;
-      case "solid":
-        return CONDUCTIVITY_DEFAULT_SOLID;
-      default:
-        return CONDUCTIVITY_DEFAULT_EMPTY;
-    }
-  };
-  const getHeatCapacity = (id: number): number => {
-    const m = registry[id];
-    if (!m) return HEAT_CAPACITY_DEFAULT_EMPTY;
-    if (typeof m.heatCapacity === "number") return m.heatCapacity;
-    switch (m.category) {
-      case "liquid":
-        return HEAT_CAPACITY_DEFAULT_LIQUID;
-      case "solid":
-        return HEAT_CAPACITY_DEFAULT_SOLID;
-      case "powder":
-        return HEAT_CAPACITY_DEFAULT_POWDER;
-      case "gas":
-        return HEAT_CAPACITY_DEFAULT_GAS;
-      default:
-        return HEAT_CAPACITY_DEFAULT_EMPTY;
-    }
-  };
-  const getDensity = (id: number): number => {
-    const m = registry[id];
-    const d = m?.density ?? 5.0;
-    return Math.abs(d);
-  };
+  const getConductivity = (id: number): number =>
+    conductivityById[id] ?? CONDUCTIVITY_DEFAULT_EMPTY;
+  const getHeatCapacity = (id: number): number =>
+    heatCapacityById[id] ?? HEAT_CAPACITY_DEFAULT_EMPTY;
+  const getDensity = (id: number): number => densityById[id] ?? 5.0;
   // base coupling scale controls speed of conduction in our unit system
   const CONDUCTION_SCALE = CONDUCTION_SCALE_PER_SEC; // tuned empirically, per second
   for (let y = 1; y < h - 1; y++) {
@@ -519,7 +478,20 @@ export function applyThermal(engine: Engine, write: GridView) {
 
       // --- Ember/Smoke transition for cooling fire ---
       if (id === FIRE && T[i] < 300) {
-        const origin = VX[i] | 0; // 2 = wood, 1 = oil, 0 = unknown/other
+        let origin = VX[i] | 0; // 2 = wood, 1 = oil, 0 = unknown/other
+        if (origin === 0) {
+          // Fallback inference: inspect immediate neighbors for fuel type
+          const neigh = [i - 1, i + 1, i - w, i + w];
+          for (const j of neigh) {
+            const mj = registry[M[j]];
+            if (mj?.name === "Wood") {
+              origin = 2;
+              break;
+            }
+            if (mj?.name === "Oil") origin = origin === 2 ? 2 : 1;
+          }
+          if (origin !== 0) VX[i] = origin as any;
+        }
         if (origin === 2) {
           M[i] = EMBER;
         } else {
@@ -562,6 +534,4 @@ export function applyThermal(engine: Engine, write: GridView) {
   }
 }
 
-function clamp01(v: number): number {
-  return v < 0 ? 0 : v > 1 ? 1 : v;
-}
+// clamp01 not needed here; conductivity is pre-clamped in cache

@@ -26,8 +26,8 @@ export function stepPowder(
   const AUX = write.aux;
   const canWrite = (idx: number): boolean => matW[idx] === matR[idx];
   for (let y = h - 2; y >= 0; y--) {
-    const dir = (y & 1) === 0 ? -1 : 1; // alternate to reduce bias per row
-    for (let x = dir < 0 ? w - 2 : 1; dir < 0 ? x >= 1 : x <= w - 2; x += dir) {
+    // consistent left->right scan; remove parity branches
+    for (let x = 1; x <= w - 2; x++) {
       const i = (y * w + x) | 0;
       const id = matR[i];
       const m = registry[id];
@@ -50,7 +50,7 @@ export function stepPowder(
               (AUX[below] | 0) > DUST_WETTING_AUX_THRESHOLD &&
               canWrite(below)
             ) {
-              // convert to Mud by material id lookup
+              // convert to Mud using preset id
               const mudId = Object.keys(registry).find(
                 (k) => registry[+k]?.name === "Mud"
               );

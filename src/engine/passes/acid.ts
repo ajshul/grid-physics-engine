@@ -1,6 +1,7 @@
 import type { Engine } from "../engine";
 import type { GridView } from "../grid";
 import { registry } from "../materials";
+import { getMaterialIdByName } from "../utils";
 import {
   ACID_ETCHANT_BUDGET_THRESHOLD,
   ACID_ETCHANT_GAIN_PER_60HZ,
@@ -21,10 +22,10 @@ export function applyAcidEtching(
   const HUM = write.humidity;
   const AUX = write.aux; // reuse per-cell counter for etch budgets
   const canWrite = (idx: number): boolean => W[idx] === R[idx];
-  // find acid id by name once
-  const acidId = findByName("Acid");
-  const rubbleId = findByName("Rubble");
-  const smokeId = findByName("Smoke");
+  // find material ids once
+  const acidId = getMaterialIdByName("Acid");
+  const rubbleId = getMaterialIdByName("Rubble");
+  const smokeId = getMaterialIdByName("Smoke");
   if (!acidId || !rubbleId) return;
 
   const dt = engine.dt;
@@ -76,9 +77,4 @@ export function applyAcidEtching(
       }
     }
   }
-}
-
-function findByName(name: string): number | undefined {
-  const id = Object.keys(registry).find((k) => registry[+k]?.name === name);
-  return id ? +id : undefined;
 }

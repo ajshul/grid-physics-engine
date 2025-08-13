@@ -189,7 +189,9 @@ export default function CanvasView() {
       if (!k) return;
       // prevent scrolling on space/arrow keys
       e.preventDefault();
-      const update: Partial<Record<"left" | "right" | "jump" | "down", boolean>> = { [k]: true } as Record<string, boolean>;
+      const update: Partial<
+        Record<"left" | "right" | "jump" | "down", boolean>
+      > = { [k]: true } as Record<string, boolean>;
       p.setInput(update);
     };
     const onKeyUp = (e: KeyboardEvent) => {
@@ -198,7 +200,9 @@ export default function CanvasView() {
       const k = key(e.code);
       if (!k) return;
       e.preventDefault();
-      const update: Partial<Record<"left" | "right" | "jump" | "down", boolean>> = { [k]: false } as Record<string, boolean>;
+      const update: Partial<
+        Record<"left" | "right" | "jump" | "down", boolean>
+      > = { [k]: false } as Record<string, boolean>;
       p.setInput(update);
     };
     const onKeyPress = (e: KeyboardEvent) => {

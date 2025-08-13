@@ -122,7 +122,7 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 ### Catalog (selected)
 
-- Solids: Stone, Wood, Ice, Glass, Rubber
+- Solids: Stone, Wood, Ice, Glass, Rubber, Bedrock
 - Powders: Sand, Dust, Rubble, Ash, Mud (wet dust)
 - Liquids: Water, Oil, Acid, Foam, Lava
 - Gases: Steam, Smoke
@@ -177,9 +177,20 @@ Each `Material` has: `id`, `name`, `category`, `color`, `density`, optional `vis
 
 ## Rendering and Overlays
 
-Renderer paints via palette; repaints only dirty chunks marked during the step. When temperature/pressure overlays are enabled, a full‑frame redraw is forced each tick to ensure overlays reflect current field values without stale regions.
+Renderer paints a viewport window via palette. The canvas shows a horizontal scrolling view into the world; the camera follows the player and clamps at world bounds. When temperature/pressure overlays are enabled, the viewport is fully redrawn each tick to ensure overlays reflect current field values without stale regions.
 
 - Overlays: temperature (blue→red around ambient) and pressure (static+impulse blended). Their alpha scales with magnitude.
+
+### World Dimensions and Camera
+
+- World width is fixed to two screen widths (default 2 × 320 cells) to avoid unbounded expansion and maintain consistent performance.
+- Engine tracks `cameraX/cameraY` and `viewW/viewH`. The blitter renders `[cameraX .. cameraX+viewW)` × `[cameraY .. cameraY+viewH)`.
+- Camera horizontally follows the player with lead and clamps to `[0, worldW - viewW]`.
+
+### Bedrock Floor
+
+- The bottom row of the grid is initialized as `Bedrock` and re‑established after clears.
+- Bedrock is immutable: painting is ignored on bedrock cells and bottom row; explosions and reactions do not alter bedrock.
 
 ---
 

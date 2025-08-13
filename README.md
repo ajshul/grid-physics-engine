@@ -9,6 +9,8 @@ A modern, deterministic, and extensible 2D grid-based physics sandbox built with
 - Pressure field for liquid/gas guidance: persistent static field with decay/diffusion plus a separate transient impulse buffer (blended)
 - Modular pass pipeline and write-guards to avoid cross-pass clobbering
 - Fuel‑aware fire lifecycle (default burnout → Smoke; oil → Smoke; wood → Ember → Ash), embers only reignite with nearby fuel; lava reliably ignites flammables before cooling to stone
+- Horizontal scrolling viewport with a fixed two‑screen world width; camera follows the player and clamps to world bounds
+- Bottom row is unbreakable Bedrock (non‑reactive, not paintable, immune to explosions)
 
 This README summarizes how to run the project, the architecture, materials and interactions, and how to extend it. For a deep-dive, see `./Engine_Guide.md`.
 
@@ -66,7 +68,7 @@ src/
         energy.ts       # fire: ignite/heat/quench/foam-suppress
         object.ts       # bombs/meteors; deterministic fuse/explosion
   render/
-    painter.ts          # canvas blit + palette + overlays (temp/pressure) + dirty chunks
+    painter.ts          # viewport blit + palette + overlays (temp/pressure)
     palette.ts          # palette from materials
   state/
     useStore.ts         # Zustand UI store
@@ -86,6 +88,12 @@ src/
   - Empty space is strongly coupled to ambient to prevent residual heat; overlays redraw the full frame each tick to avoid stale visualization
 - Reactions: water+lava→stone+steam (brief heat gating, then precedence); rubber pops to smoke; wood chars; foam deterministically quenches fire; acid etching deterministic via budgets; lava preheats/ignites nearby oil/wood before it cools to stone
 - Objects: bomb uses `aux` as a deterministic fuse; explosion applies heat + smoke/fire + pressure impulse
+
+### World and Camera
+
+- Viewport: the canvas shows a moving window into the world; the camera follows the player horizontally
+- World size: fixed to exactly two screen widths (by default 2 × 320 cells wide); the camera clamps at the left (x=0) and the right edge
+- Bedrock: the bottom row is filled with `Bedrock` and is immutable (cannot be painted, does not react, explosions do not alter it)
 
 ### Player Physics and Interactions
 
@@ -111,7 +119,7 @@ Core tunables (e.g., ambient temperature, conduction scale, latent heat, pressur
 
 ## Materials (Selected)
 
-- Solids: Stone, Wood, Ice, Glass, Rubber
+- Solids: Stone, Wood, Ice, Glass, Rubber, Bedrock
 - Powders: Sand, Dust, Rubble, Ash
 - Liquids: Water, Oil, Acid, Foam, Lava
 - Gases: Smoke, Steam

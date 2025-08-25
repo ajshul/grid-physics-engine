@@ -1,4 +1,4 @@
-# Grid Sandbox — 2D Grid Physics Sandbox
+# 2D Grid Sandbox
 
 A modern, deterministic, and extensible 2D grid-based physics sandbox built with Vite + React + TypeScript.
 
